@@ -1,0 +1,16 @@
+__pycache__/
+*.py[codz]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+.git/
+.idea/
+.vscode/
+.cursor/
+
