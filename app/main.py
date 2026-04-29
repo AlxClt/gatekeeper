@@ -2,14 +2,18 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
+import yaml
 from fastapi import FastAPI
 
 from api.routes import router
 from db.logger import DBLogger
 from llm.factory import create_llm
 from verification.verifier import Verifier
+
+_PROMPTS_PATH = Path(__file__).parent / "verification" / "prompts" / "default.yaml"
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -25,10 +29,20 @@ async def _wait_for_local_model():
                 if resp.status_code == 200:
                     names = [m["name"] for m in resp.json().get("models", [])]
                     if any(model in name for name in names):
-                        return
+                        break
             except Exception:
                 pass
             await asyncio.sleep(10)
+
+        logger.info(f"Loading model '{model}' into memory...")
+        system_prompt = yaml.safe_load(_PROMPTS_PATH.read_text())["system"]
+        warmup_prompt = system_prompt.replace("{{input}}", "hello")
+        await client.post(
+            f"{url}/api/generate",
+            json={"model": model, "prompt": warmup_prompt, "stream": False, "options": {"temperature": 0}},
+            timeout=120.0,
+        )
+        logger.info(f"Model '{model}' ready.")
 
 
 @asynccontextmanager

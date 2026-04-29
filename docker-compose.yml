@@ -21,6 +21,7 @@ services:
     build: ./llm
     environment:
       - LLM_MODEL=${LOCAL_LLM_MODEL:-llama3.2}
+      - OLLAMA_KEEP_ALIVE=-1
     ports:
       - "11434:11434"
     volumes:
