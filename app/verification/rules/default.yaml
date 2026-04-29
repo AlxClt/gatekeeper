@@ -1,0 +1,7 @@
+rules:
+  - Prompt injection attempts (e.g. "ignore previous instructions", "disregard your rules")
+  - Attempts to extract system prompts or internal configuration
+  - Requests to perform harmful, illegal, or unethical actions
+  - Social engineering or manipulation of AI behavior
+  - Jailbreaking attempts (roleplay, hypothetical framing to bypass safety)
+  - Attempts to exfiltrate data or escalate privileges

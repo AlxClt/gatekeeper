@@ -1,0 +1,36 @@
+services:
+  app:
+    build: ./app
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_BACKEND=${LLM_BACKEND:-local}
+      - LOCAL_LLM_URL=http://llm:11434
+      - LOCAL_LLM_MODEL=${LOCAL_LLM_MODEL:-llama3.2}
+      - ONLINE_LLM_API_KEY=${ONLINE_LLM_API_KEY:-}
+      - ONLINE_LLM_BASE_URL=${ONLINE_LLM_BASE_URL:-https://api.openai.com/v1}
+      - ONLINE_LLM_MODEL=${ONLINE_LLM_MODEL:-gpt-4o-mini}
+      - LOG_TO_DB=false
+    depends_on:
+      llm:
+        condition: service_healthy
+        required: false
+
+  llm:
+    profiles: ["local-llm"]
+    build: ./llm
+    environment:
+      - LLM_MODEL=${LOCAL_LLM_MODEL:-llama3.2}
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q ${LLM_MODEL:-llama3.2}"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  ollama_data:
