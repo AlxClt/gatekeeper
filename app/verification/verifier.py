@@ -14,13 +14,13 @@ class Verifier:
     def __init__(self, llm: LLMInterface, db_logger: DBLogger):
         self.llm = llm
         self.db_logger = db_logger
-        self._rules = yaml.safe_load(_RULES_PATH.read_text())
-        self._prompts = yaml.safe_load(_PROMPTS_PATH.read_text())
 
     async def verify(self, text: str) -> int:
-        rules_text = "\n".join(f"- {r}" for r in self._rules["rules"])
+        rules = yaml.safe_load(_RULES_PATH.read_text())
+        prompts = yaml.safe_load(_PROMPTS_PATH.read_text())
+        rules_text = "\n".join(f"- {r}" for r in rules["rules"])
         prompt = (
-            f"{self._prompts['system']}\n\n"
+            f"{prompts['system']}\n\n"
             f"Rules:\n{rules_text}\n\n"
             f"Text to analyze:\n{text}\n\n"
             "Respond with only the digit 0 or 1."

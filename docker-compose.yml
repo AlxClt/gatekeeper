@@ -11,6 +11,9 @@ services:
       - ONLINE_LLM_BASE_URL=${ONLINE_LLM_BASE_URL:-https://api.openai.com/v1}
       - ONLINE_LLM_MODEL=${ONLINE_LLM_MODEL:-gpt-4o-mini}
       - LOG_TO_DB=false
+    volumes:
+      - ./app/verification/rules:/app/verification/rules:ro
+      - ./app/verification/prompts:/app/verification/prompts:ro
     depends_on:
       llm:
         condition: service_healthy
