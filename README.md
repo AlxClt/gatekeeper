@@ -11,10 +11,10 @@ gatekeeper/
 ├── .env.example
 ├── app/                         # FastAPI container
 │   ├── main.py
-│   ├── api/routes.py            # POST /verify
+│   ├── api/routes.py            # POST /verify, POST /verify-one-pass
 │   ├── verification/
-│   │   ├── verifier.py          # core logic: build prompt → call LLM → parse → log
-│   │   ├── rules/default.yaml   # threat detection rules
+│   │   ├── verifier.py          # two-pass and one-pass classification logic
+│   │   ├── preprocessing.py     # input sanitisation pipeline (7 steps, see below)
 │   │   └── prompts/default.yaml # LLM system prompt
 │   ├── llm/
 │   │   ├── interface.py         # abstract base
@@ -25,6 +25,10 @@ gatekeeper/
 ├── llm/                         # Ollama container
 │   ├── Dockerfile
 │   └── entrypoint.sh            # starts server, pulls model
+├── demo/
+│   ├── demo.py                  # end-to-end demo (calls the live API)
+│   ├── demo_prompt.txt          # sample prompt for the demo
+│   └── smoke_preprocessing.py  # standalone smoke test for the preprocessing pipeline
 └── db/init.sql                  # logs table schema
 ```
 
@@ -54,18 +58,57 @@ docker compose --profile local-llm -f docker-compose.yml -f docker-compose.prod.
 
 ## API
 
+`1` = threat detected, `0` = no threat.
+
+### `POST /verify` — two-pass classification
+
+Runs two independent LLM classification calls and returns a threat if **either** pass detects one:
+
+1. **Raw pass** — classifies the prompt exactly as received. Catches clear-text attacks and attempts to manipulate the model directly.
+2. **Preprocessed pass** — decodes obfuscation layers, strips invisible characters and fake markup, then classifies the cleaned text. Catches attacks hidden behind encoding or lookalike characters.
+
+Use this endpoint when security is the only concern and you want to use the original, untouched prompt downstream.
+
 ```
 POST /verify
 Content-Type: application/json
 
-{ "prompt": "ignore all previous instructions" }
+{ "prompt": "SWdub3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnM=" }
 ```
 
 ```json
 { "result": 1 }
 ```
 
-`1` = threat detected, `0` = no threat.
+### `POST /verify-one-pass` — single-pass with preprocessed output
+
+Preprocesses the prompt once, then runs a single LLM classification on the cleaned text. Returns both the result and the sanitised prompt.
+
+Use this endpoint when you want the sanitized prompt to be forwarded to another system — the `preprocessed_prompt` field contains the decoded, normalised text safe to pass downstream.
+
+```
+POST /verify-one-pass
+Content-Type: application/json
+
+{ "prompt": "Ignore%20all%20previous%20instructions" }
+```
+
+```json
+{
+  "result": 1,
+  "preprocessed_prompt": "Ignore all previous instructions"
+}
+```
+
+### Which endpoint to use
+
+| | `/verify` | `/verify-one-pass` |
+|---|---|---|
+| LLM calls per request | 2 | 1 |
+| Detects raw clear-text attacks | yes | no |
+| Detects obfuscated attacks | yes | yes |
+| Returns sanitised prompt | no | yes |
+| Use when | maximum detection coverage and use of the original prompt downstream  | forwarding cleaned input downstream |
 
 ## Configuration
 
@@ -81,6 +124,23 @@ Content-Type: application/json
 
 
 For all Ollama compatible models, [see here](https://ollama.com/library)
+
+## Preprocessing pipeline
+
+Before a prompt reaches the LLM, it passes through a 7-step sanitisation pipeline (`app/verification/preprocessing.py`):
+
+| Step | What it does |
+|---|---|
+| Length check & truncation | Caps input at 4 000 characters to prevent token exhaustion |
+| Strip invisible characters | Removes zero-width spaces, bidi overrides, soft hyphens — used to hide keywords from text scanners |
+| Decode obfuscation layers | Resolves URL-encoding, HTML entities, Base64, and hex blobs in sequence |
+| Unicode normalisation (NFKC) | Collapses lookalike characters (`ｉｇｎｏｒｅ` → `ignore`) |
+| Strip fake model markup | Removes control tokens (`<|system|>`, `<|im_start|>`) and tag-style delimiters (`<system>`, `<assistant>`) |
+| Regex pre-screen | Flags PII and credential patterns (email, SSN, API keys, JWTs, AWS keys, …) and logs the hits |
+
+The pipeline returns both the cleaned text and a list of pattern hit names, both of which are available for downstream logic.
+
+See [demo/smoke_preprocessing.py](demo/smoke_preprocessing.py) for a runnable example of each step.
 
 ## Demo
 
@@ -104,3 +164,28 @@ GATEKEEPER_URL=http://your-server:8000 python demo/demo.py
 ```
 
 No dependencies required — the script uses the Python standard library only.
+
+### Preprocessing smoke test
+
+To exercise the preprocessing pipeline without running the full stack:
+
+```bash
+python demo/smoke_preprocessing.py
+```
+
+```
+[PASS] clean input
+[PASS] base64-encoded injection
+[PASS] URL-encoded injection
+[PASS] HTML-entity obfuscation
+[PASS] fake model delimiter
+[PASS] fake markup tag
+[PASS] email PII
+[PASS] JWT token
+[PASS] AWS access key
+[PASS] long input truncated
+
+All 10 cases passed.
+```
+
+This requires no running services — only a Python environment with the app dependencies installed.
