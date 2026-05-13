@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from db.logger import DBLogger
-from llm.interface import LLMInterface
+from app.llm.llm_adaptater import LLMInterface
 from verification.preprocessing import preprocess
 
 logger = logging.getLogger("uvicorn.error")
