@@ -1,9 +1,6 @@
 import os
 
-from llm.interface import LLMInterface
-from llm.local_adapter import LocalAdapter
-from llm.online_adapter import OnlineAdapter
-
+from app.llm.llm_adaptater import LLMInterface, LocalAdapter, OnlineAdapter
 
 def create_llm() -> LLMInterface:
     backend = os.getenv("LLM_BACKEND", "local")
