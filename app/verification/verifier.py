@@ -35,9 +35,8 @@ class Verifier:
 
     async def _classify(self, text: str) -> int:
         # Note: yaml kept for future extensibility
-        template = yaml.safe_load(_PROMPTS_PATH.read_text())
-        prompt = template.replace("{{input}}", text)
-        response = await self.llm.complete(prompt)
+        system_prompt = yaml.safe_load(_PROMPTS_PATH.read_text())
+        response = await self.llm.complete(system_prompt=system_prompt, user_input=text)
         return self._parse_result(response)
 
     @staticmethod

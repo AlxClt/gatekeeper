@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from api.routes import router
 from db.logger import DBLogger
 from llm.factory import create_llm
+from llm.llm_adaptater import LLMInterface
 from verification.verifier import Verifier
 
 _PROMPTS_PATH = Path(__file__).parent / "verification" / "prompts" / f"{os.getenv('PROMPT_NAME', 'default')}.yaml"
@@ -37,7 +38,7 @@ async def _wait_for_local_model():
         logger.info(f"Loading model '{model}' into memory...")
 
         system_prompt = yaml.safe_load(_PROMPTS_PATH.read_text())
-        warmup_prompt = system_prompt.replace("{{input}}", "hello")
+        warmup_prompt = system_prompt + LLMInterface.format_user_input_text("hello world")
         timeout = float(os.getenv("LOCAL_LLM_TIMEOUT", "300"))
         await client.post(
             f"{url}/api/generate",
@@ -58,7 +59,7 @@ async def lifespan(app: FastAPI):
     logger.info("Gatekeeper ready — POST /verify to classify prompts")
     yield
     await db_logger.close()
-
+    await llm.aclose()
 
 app = FastAPI(title="Gatekeeper", lifespan=lifespan)
 app.include_router(router)
