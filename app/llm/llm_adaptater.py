@@ -14,9 +14,10 @@ class LocalAdapter(LLMInterface):
     def __init__(self):
         self.base_url = os.getenv("LOCAL_LLM_URL", "http://llm:11434")
         self.model = os.getenv("LOCAL_LLM_MODEL", "llama3.2")
+        self.timeout = float(os.getenv("LOCAL_LLM_TIMEOUT", "300"))
 
     async def complete(self, prompt: str) -> str:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/generate",
                 json={"model": self.model, "prompt": prompt, "stream": False, "options": {"temperature": 0}},
@@ -41,7 +42,7 @@ class OnlineAdapter(LLMInterface):
                 json={
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 10,
+                    "max_tokens": 5,
                     "temperature": 0,
                 },
             )

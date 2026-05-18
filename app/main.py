@@ -13,7 +13,7 @@ from db.logger import DBLogger
 from llm.factory import create_llm
 from verification.verifier import Verifier
 
-_PROMPTS_PATH = Path(__file__).parent / "verification" / "prompts" / "default.yaml"
+_PROMPTS_PATH = Path(__file__).parent / "verification" / "prompts" / f"{os.getenv('PROMPT_NAME', 'default')}.yaml"
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -35,12 +35,14 @@ async def _wait_for_local_model():
             await asyncio.sleep(10)
 
         logger.info(f"Loading model '{model}' into memory...")
-        system_prompt = yaml.safe_load(_PROMPTS_PATH.read_text())["system"]
+
+        system_prompt = yaml.safe_load(_PROMPTS_PATH.read_text())
         warmup_prompt = system_prompt.replace("{{input}}", "hello")
+        timeout = float(os.getenv("LOCAL_LLM_TIMEOUT", "300"))
         await client.post(
             f"{url}/api/generate",
             json={"model": model, "prompt": warmup_prompt, "stream": False, "options": {"temperature": 0}},
-            timeout=120.0,
+            timeout=timeout,
         )
         logger.info(f"Model '{model}' ready.")
 

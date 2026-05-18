@@ -1,5 +1,7 @@
 # Custom
 architecture/
+useful.txt
+*.docx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,16 +1,16 @@
+import os
 import logging
 from pathlib import Path
 
 import yaml
 
 from db.logger import DBLogger
-from app.llm.llm_adaptater import LLMInterface
+from llm.llm_adaptater import LLMInterface
 from verification.preprocessing import preprocess
 
 logger = logging.getLogger("uvicorn.error")
 
-_PROMPTS_PATH = Path(__file__).parent / "prompts" / "default.yaml"
-
+_PROMPTS_PATH = Path(__file__).parent / "prompts" / f"{os.getenv('PROMPT_NAME', 'default')}.yaml"
 
 class Verifier:
     def __init__(self, llm: LLMInterface, db_logger: DBLogger):
@@ -34,8 +34,9 @@ class Verifier:
         return result, preprocessed
 
     async def _classify(self, text: str) -> int:
-        prompts = yaml.safe_load(_PROMPTS_PATH.read_text())
-        prompt = prompts["system"].replace("{{input}}", text)
+        # Note: yaml kept for future extensibility
+        template = yaml.safe_load(_PROMPTS_PATH.read_text())
+        prompt = template.replace("{{input}}", text)
         response = await self.llm.complete(prompt)
         return self._parse_result(response)
 
