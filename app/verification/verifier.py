@@ -17,29 +17,34 @@ class Verifier:
         self.llm = llm
         self.db_logger = db_logger
 
-    async def verify(self, text: str) -> int:
-        """Two-pass: classify raw text, then preprocessed. Returns 1 if either pass detects a threat."""
-        result_raw = await self._classify(text)
+    async def _preprocess(self, text: str) -> str:
+        """Preprocesses the candidate prompt, returns cleaned prompt (not threatless, but )"""
         preprocessed = preprocess(text).text
-        result_clean = await self._classify(preprocessed)
-        result = 1 if (result_raw or result_clean) else 0
-        await self.db_logger.log(text, result)
-        return result
-
-    async def verify_one_pass(self, text: str) -> tuple[int, str]:
-        """Single-pass: preprocess then classify. Returns (result, preprocessed_text)."""
-        preprocessed = preprocess(text).text
-        result = await self._classify(preprocessed)
-        await self.db_logger.log(preprocessed, result)
-        return result, preprocessed
-
+        return preprocessed
+ 
     async def _classify(self, text: str) -> int:
         # Note: yaml kept for future extensibility
         template = yaml.safe_load(_PROMPTS_PATH.read_text())
         prompt = template.replace("{{input}}", text)
         response = await self.llm.complete(prompt)
         return self._parse_result(response)
+       
+    async def verify(self, text: str) -> tuple[int, str]:
+        """Single-pass: preprocess then classify. Returns (result, preprocessed_text)."""
+        preprocessed = await self._preprocess(text)
+        result = await self._classify(preprocessed)
+        await self.db_logger.log(preprocessed, result)
+        return result, preprocessed
 
+    async def verify_raw(self, text: str) -> int:
+        """Two-pass: classify raw text, then preprocessed. Returns 1 if either pass detects a threat."""
+        result_raw = await self._classify(text)
+        preprocessed = await self._preprocess(text)
+        result_clean = await self._classify(preprocessed)
+        result = 1 if (result_raw or result_clean) else 0
+        await self.db_logger.log(text, result)
+        return result
+    
     @staticmethod
     def _parse_result(response: str) -> int:
         stripped = response.strip()

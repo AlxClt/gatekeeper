@@ -15,8 +15,8 @@ import urllib.request
 from urllib.error import URLError
 
 BASE_URL = os.getenv("GATEKEEPER_URL", "http://localhost:8000")
-URL_ONE = BASE_URL + "/verify-one-pass"
-URL_TWO = BASE_URL + "/verify"
+URL_VERIFIER = BASE_URL + "/verify"
+URL_VERIFIER_RAW = BASE_URL + "/verify-raw"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 
@@ -300,8 +300,8 @@ def main() -> None:
             current_category = category
 
         try:
-            one_data, one_t = post(URL_ONE, prompt)
-            two_data, two_t = post(URL_TWO, prompt)
+            one_data, one_t = post(URL_VERIFIER, prompt)
+            two_data, two_t = post(URL_VERIFIER_RAW, prompt)
         except URLError as exc:
             print(f"\n  {RED}ERROR — cannot reach {BASE_URL}: {exc}{RESET}")
             print("  Start the server with:  docker compose up\n")
