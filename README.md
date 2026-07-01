@@ -4,9 +4,12 @@ A Dockerized security gateway that classifies text prompts for threats using an 
 
 Threats in scope for this project:
 - OWASP LLM01: Prompt Injection
-- OWASP LLM02: Sensitive Information Disclosure
 - OWASP LLM07: System Prompt Leakage
 - Jailbreak attempts
+
+Threats considered being added in scope:
+- OWASP LLM02: Sensitive Information Disclosure
+
 
 ## Structure
 
