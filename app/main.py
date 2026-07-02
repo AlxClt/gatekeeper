@@ -63,6 +63,17 @@ async def _wait_for_online_model():
             await adapter.complete(_warmup_prompt())
             logger.info("Online LLM backend ready.")
             return
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise RuntimeError(
+                    f"Online LLM backend has no model '{adapter.model}' at "
+                    f"{adapter.base_url!r} (404 Not Found) — check ONLINE_LLM_MODEL "
+                    "for a typo or a mismatch with what the backend actually serves."
+                ) from exc
+            logger.warning(f"Online LLM warmup attempt {attempt}/{retries} failed: {exc}")
+            if attempt == retries:
+                raise
+            await asyncio.sleep(10)
         except Exception as exc:
             logger.warning(f"Online LLM warmup attempt {attempt}/{retries} failed: {exc}")
             if attempt == retries:
