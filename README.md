@@ -134,6 +134,8 @@ Content-Type: application/json
 | `ONLINE_LLM_API_KEY` | — | API key for the online provider |
 | `ONLINE_LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL (OpenAI, Groq, Azure, etc.) |
 | `ONLINE_LLM_MODEL` | `gpt-4o-mini` | Model name for the online provider |
+| `ONLINE_LLM_TIMEOUT` | `30` | Request timeout (seconds) for the online backend |
+| `ONLINE_LLM_WARMUP` | `false` | Fire a warmup request at startup instead of on the first user request. Only relevant for self-hosted OpenAI-compatible servers with Ollama-style cold starts — real hosted APIs are already warm and don't need it |
 | `LOG_TO_DB` | `false` | Enable Postgres logging (`true` in prod overlay) |
 | `POSTGRES_PASSWORD` | `gatekeeper` | Postgres password (prod only) |
 

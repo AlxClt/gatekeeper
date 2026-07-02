@@ -33,9 +33,10 @@ class OnlineAdapter(LLMInterface):
         self.api_key = os.getenv("ONLINE_LLM_API_KEY", "")
         self.base_url = os.getenv("ONLINE_LLM_BASE_URL", "https://api.openai.com/v1")
         self.model = os.getenv("ONLINE_LLM_MODEL", "undefined")
+        self.timeout = float(os.getenv("ONLINE_LLM_TIMEOUT", "30"))
 
     async def complete(self, prompt: str) -> str:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"},
