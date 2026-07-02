@@ -49,7 +49,7 @@ async def _wait_for_local_model():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if os.getenv("LLM_BACKEND", "local") == "local":
+    if os.getenv("LLM_BACKEND", "online") == "local":
         await _wait_for_local_model()
     llm = create_llm()
     db_logger = DBLogger(enabled=os.getenv("LOG_TO_DB", "false").lower() == "true")

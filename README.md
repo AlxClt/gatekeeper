@@ -15,7 +15,8 @@ Threats considered being added in scope:
 
 ```
 gatekeeper/
-├── docker-compose.yml           # dev: app + local LLM (Ollama)
+├── docker-compose.yml           # base: app service, defaults to the online backend
+├── docker-compose.local-llm.yml # local-llm overlay: switches app to the local backend
 ├── docker-compose.prod.yml      # prod overlay: adds Postgres, enables logging
 ├── .env.example
 ├── app/                         # FastAPI container
@@ -48,10 +49,12 @@ gatekeeper/
 cp .env.example .env
 ```
 
+The LLM backend follows which compose files you run — no need to edit `LLM_BACKEND` in `.env`.
+
 **Local LLM** — Ollama + app, no database logging:
 
 ```bash
-docker compose --profile local-llm up
+docker compose -f docker-compose.yml -f docker-compose.local-llm.yml --profile local-llm up
 ```
 
 Note that the model's weights are loaded into memory at app startup time, which can make it quite slow depending on the model used
@@ -60,7 +63,6 @@ Note that the model's weights are loaded into memory at app startup time, which 
 
 ```bash
 # set in .env:
-# LLM_BACKEND=online
 # ONLINE_LLM_API_KEY=sk-...
 docker compose up
 ```
@@ -68,7 +70,11 @@ docker compose up
 **Prod** — adds Postgres with persistent logging (combine with either backend above):
 
 ```bash
-docker compose --profile local-llm -f docker-compose.yml -f docker-compose.prod.yml up
+# local backend + prod
+docker compose -f docker-compose.yml -f docker-compose.local-llm.yml -f docker-compose.prod.yml --profile local-llm up
+
+# online backend + prod
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 ```
 
 ## API
@@ -123,7 +129,7 @@ Content-Type: application/json
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_BACKEND` | `local` | `local` (Ollama) or `online` (OpenAI-compatible) |
+| `LLM_BACKEND` | `online` (base), `local` (with `docker-compose.local-llm.yml`) | `local` (Ollama) or `online` (OpenAI-compatible) |
 | `LOCAL_LLM_MODEL` | `llama3.2` | Model name to pull and run in Ollama |
 | `ONLINE_LLM_API_KEY` | — | API key for the online provider |
 | `ONLINE_LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL (OpenAI, Groq, Azure, etc.) |

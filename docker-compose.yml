@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - LLM_BACKEND=${LLM_BACKEND:-local}
+      - LLM_BACKEND=${LLM_BACKEND:-online}
       - LOCAL_LLM_URL=http://llm:11434
       - LOCAL_LLM_MODEL=${LOCAL_LLM_MODEL:-llama3.2}
       - ONLINE_LLM_API_KEY=${ONLINE_LLM_API_KEY:-}

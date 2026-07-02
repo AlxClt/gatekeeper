@@ -32,7 +32,7 @@ class OnlineAdapter(LLMInterface):
     def __init__(self):
         self.api_key = os.getenv("ONLINE_LLM_API_KEY", "")
         self.base_url = os.getenv("ONLINE_LLM_BASE_URL", "https://api.openai.com/v1")
-        self.model = os.getenv("ONLINE_LLM_MODEL", "gpt-4o-mini")
+        self.model = os.getenv("ONLINE_LLM_MODEL", "undefined")
 
     async def complete(self, prompt: str) -> str:
         async with httpx.AsyncClient(timeout=30.0) as client:
