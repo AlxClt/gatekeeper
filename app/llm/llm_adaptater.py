@@ -43,7 +43,7 @@ class OnlineAdapter(LLMInterface):
                 json={
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 5,
+                    "max_tokens": 1,
                     "temperature": 0,
                 },
             )
