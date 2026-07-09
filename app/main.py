@@ -43,9 +43,16 @@ async def _wait_for_local_model():
         logger.info(f"Loading model '{model}' into memory...")
 
         timeout = float(os.getenv("LOCAL_LLM_TIMEOUT", "300"))
+        think = os.getenv("LLM_THINK", "false").lower() == "true"
         await client.post(
             f"{url}/api/generate",
-            json={"model": model, "prompt": _warmup_prompt(), "stream": False, "options": {"temperature": 0}},
+            json={
+                "model": model,
+                "prompt": _warmup_prompt(),
+                "stream": False,
+                "think": think,
+                "options": {"temperature": 0},
+            },
             timeout=timeout,
         )
         logger.info(f"Model '{model}' ready.")
