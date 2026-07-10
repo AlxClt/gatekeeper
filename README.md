@@ -48,10 +48,9 @@ Full per-model evaluation details are reported in [`evaluation/results.md`](eval
 | llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 | 0.329 |
 | qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 | 0.118 |
 | gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 | 0.442 |
-| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | 0.932 | 0.104 |
-| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | 0.940 | 0.038 |
+| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | **0.932** | 0.104 |
+| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | **0.940** | 0.038 |
 | qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
-| gemma4:12b | Zero-shot 12B | 0.941 | 0.965 | 0.953 | 0.058 |
 | *TBD* | Fine-tuned | | | | |
 
 ## Structure
