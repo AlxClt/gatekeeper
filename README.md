@@ -93,8 +93,6 @@ gatekeeper/
 cp .env.example .env
 ```
 
-The LLM backend follows which compose files you run — no need to edit `LLM_BACKEND` in `.env`.
-
 **Local LLM** — Ollama + app, no database logging:
 
 ```bash
@@ -173,7 +171,9 @@ Content-Type: application/json
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_BACKEND` | `online` (base), `local` (with `docker-compose.local-llm.yml`) | `local` (Ollama) or `online` (OpenAI-compatible) |
+| `LLM_BACKEND` | `online` | Set automatically by which compose files you run (see above); uncomment in `.env` only to force a value regardless of the compose invocation |
+| `PROMPT_NAME` | `default` | Selects `app/verification/prompts/<name>.yaml`. Must be set to a file that exists (`default-3b` or `default-9b`) — there is no `default.yaml` |
+| `LLM_THINK` | `false` | Disable reasoning/"thinking" output for hybrid reasoning models (e.g. qwen3, deepseek-r1) so the raw response is just the bare `0`/`1`. Ignored by non-reasoning models. `gpt-oss` models require `low`/`medium`/`high` instead of a boolean |
 | `LOCAL_LLM_MODEL` | `llama3.2` | Model name to pull and run in Ollama |
 | `ONLINE_LLM_API_KEY` | — | API key for the online provider |
 | `ONLINE_LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL (OpenAI, Groq, Azure, etc.) |
@@ -182,6 +182,7 @@ Content-Type: application/json
 | `ONLINE_LLM_WARMUP` | `false` | Fire a warmup request at startup instead of on the first user request. Only relevant for self-hosted OpenAI-compatible servers with Ollama-style cold starts — real hosted APIs are already warm and don't need it |
 | `LOG_TO_DB` | `false` | Enable Postgres logging (`true` in prod overlay) |
 | `POSTGRES_PASSWORD` | `gatekeeper` | Postgres password (prod only) |
+| `HF_TOKEN` | — | Hugging Face token, only needed to rebuild the eval dataset (gated `allenai/wildguardmix` dataset) |
 
 
 For all Ollama compatible models, [see here](https://ollama.com/library)
