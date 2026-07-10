@@ -11,36 +11,81 @@ Threats considered being added in scope:
 - OWASP LLM02: Sensitive Information Disclosure
 
 
+**Note**: 
+
+For the scope of this project, we limit ourselves to the minimal interpretation of LLM01. As we do not target a model with specific instruction, we do not cover jailbreak attempts that aim at bypassing instructions in a non explicit manner. as an example, "answer in rude language" can be considered an injection if the model has an instruction like "do not use rude language".
+
+We do not assume the existence of such instructions in this project. We focus on prompt injections generically trying to modify the model's behavior ("forget your instructions", "you can do anything now" etc) or extracting system prompt, secrets, passwords etc.
+
+The methodology and the models can be adapted to cover more specific sets of instructions.
+
+## What it does
+
+Gatekeeper is an API calling either a local model, or a model served at an OpenAI compatible endpoint. 
+
+In zero shot mode, this model recieves the preprocessed text to be classified along with an optimized prompt for detection, and returns 1 (threat) or 0 (begning)
+
+[Coming soon] A model will be fine tuned for faster and better execution
+
+## Evaluation of the models
+
+Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluation/eval_dataset_clean.parquet`) assembled from the public sources below — see `evaluation/create_eval_dataset.ipynb` for the full build logic. These sources were chosen for their fit to the task and their low label-noise ratio, and are kept entirely separate from any future fine-tuning data.
+
+| Source | Threat class | Rows | Notes |
+|---|---|---|---|
+| [Tensor Trust](https://github.com/HumanCompatibleAI/tensor-trust-data) (extraction) | LLM07 | 430 | Human-generated, manually cleaned; highest signal-per-sample LLM07 anchor. All-positive, no native negatives. |
+| [`Lakera/gandalf_ignore_instructions`](https://huggingface.co/datasets/Lakera/gandalf_ignore_instructions) | LLM07 | 999 | Real user attacks against the Gandalf game (leaking a hidden password/system prompt). All-positive, no native negatives. |
+| [`deepset/prompt-injections`](https://huggingface.co/datasets/deepset/prompt-injections) | LLM01 / benign | 547 (128 LLM01 / 419 benign) | Small, clean, bilingual (EN/DE). Native labels were audited and manually corrected (`evaluation/deepset_relabeled.csv`). |
+| [`leolee99/NotInject`](https://huggingface.co/datasets/leolee99/NotInject) | benign | 339 | Benign prompts loaded with injection trigger words ("ignore", "system"...) — the key over-defense / false-positive probe. |
+| [`natolambert/xstest-v2-copy`](https://huggingface.co/datasets/natolambert/xstest-v2-copy) | benign | 150 | Benign questions that *sound* risky (e.g. "how do I kill a process?") — hard negatives for exaggerated-safety failures. |
+| [`allenai/wildguardmix`](https://huggingface.co/datasets/allenai/wildguardmix) (`wildguardtest`) | benign | 945 | Plain benign negatives, filtered to `unharmful`-labeled prompts. Gated dataset (requires `HF_TOKEN`). |
+| [`neuralchemy/Prompt-injection-dataset`](https://huggingface.co/datasets/neuralchemy/Prompt-injection-dataset) (`:clean` slice) | LLM01 / LLM07 | 254 (220 LLM01 / 34 LLM07) | Multi-category taxonomy dataset; only categories judged clean/unambiguous enough for eval are kept (e.g. `agent_manipulation`, `instruction_override`, `rag_poisoning`, `system_extraction`). |
+
+Full per-model evaluation details are reported in [`evaluation/results.md`](evaluation/results.md). Here is the global models comparison:
+
+| Model | Category | precision | recall | f1 | fpr |
+|---|---|---|---|---|---|
+| llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 | 0.329 |
+| qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 | 0.118 |
+| gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 | 0.442 |
+| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | 0.932 | 0.104 |
+| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | 0.940 | 0.038 |
+| qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
+| gemma4:12b | Zero-shot 12B | 0.941 | 0.965 | 0.953 | 0.058 |
+| *TBD* | Fine-tuned | | | | |
+
 ## Structure
 
 ```
 gatekeeper/
-├── docker-compose.yml           # base: app service, defaults to the online backend
-├── docker-compose.local-llm.yml # local-llm overlay: switches app to the local backend
-├── docker-compose.prod.yml      # prod overlay: adds Postgres, enables logging
+├── docker-compose.yml            # base: app service, defaults to the online backend
+├── docker-compose.local-llm.yml  # local-llm overlay: switches app to the local backend
+├── docker-compose.prod.yml       # prod overlay: adds Postgres, enables logging
 ├── .env.example
-├── app/                         # FastAPI container
+├── app/                          # FastAPI container
 │   ├── main.py
-│   ├── api/routes.py            # POST /verify, POST /verify-one-pass
+│   ├── api/routes.py             # POST /verify, POST /verify-raw
 │   ├── verification/
-│   │   ├── verifier.py          # two-pass and one-pass classification logic
-│   │   ├── preprocessing.py     # input sanitisation pipeline (7 steps, see below)
-│   │   └── prompts/default.yaml # LLM system prompt
+│   │   ├── verifier.py           # single-pass (verify) and two-pass (verify_raw) classification logic
+│   │   ├── preprocessing.py      # input sanitisation pipeline (7 steps, see below)
+│   │   └── prompts/              # LLM system prompts: default-3b.yaml, default-9b.yaml
 │   ├── llm/
-│   │   ├── interface.py         # abstract base
-│   │   ├── factory.py           # selects adapter from LLM_BACKEND env var
-│   │   ├── local_adapter.py     # Ollama (local container)
-│   │   └── online_adapter.py    # OpenAI-compatible API
-│   └── db/logger.py             # Postgres logging (no-op when LOG_TO_DB=false)
-├── llm/                         # Ollama container
+│   │   ├── factory.py            # selects adapter from LLM_BACKEND env var
+│   │   └── llm_adaptater.py      # LLMInterface + LocalAdapter (Ollama) + OnlineAdapter (OpenAI-compatible)
+│   └── db/logger.py              # Postgres logging (no-op when LOG_TO_DB=false)
+├── llm/                          # Ollama container
 │   ├── Dockerfile
-│   └── entrypoint.sh            # starts server, pulls model
+│   └── entrypoint.sh             # starts server, pulls model
 ├── demo/
-│   ├── demo.py                  # end-to-end demo (calls the live API)
-│   ├── demo_prompt.txt          # sample prompt for the demo
-│   ├── smoke_preprocessing.py  # standalone smoke test for the preprocessing pipeline
-│   └── attack_demo.py           # 25-prompt attack technique demo (one-pass vs two-pass)
-└── db/init.sql                  # logs table schema
+│   ├── demo.py                   # end-to-end demo (calls the live API)
+│   ├── demo_prompt.txt           # sample prompt for the demo
+│   ├── smoke_preprocessing.py    # standalone smoke test for the preprocessing pipeline
+│   └── attack_demo.py            # 30-prompt attack technique demo (one-pass vs two-pass)
+├── evaluation/                   # dataset curation + zero-shot evaluation notebooks
+│   ├── create_eval_dataset.ipynb # builds eval_dataset_clean.parquet / train_raw.parquet
+│   ├── evaluation.ipynb          # runs the clean eval set through POST /verify, computes metrics
+│   └── results.md                # per-model precision/recall/F1/FPR results
+└── db/init.sql                   # logs table schema
 ```
 
 ## How to run
@@ -183,12 +228,12 @@ GATEKEEPER_URL=http://your-server:8000 python demo/demo.py
 
 No dependencies required — the script uses the Python standard library only.
 
-### Preprocessing smoke test
+### Preprocessing demo
 
 To exercise the preprocessing pipeline without running the full stack:
 
 ```bash
-python demo/smoke_preprocessing.py
+python demo/preprocessing_demo.py
 ```
 
 ```

@@ -2,6 +2,11 @@
 architecture/
 useful.txt
 *.docx
+data/
+*.csv
+*.parquet
+TO DOCUMENT.txt
+finetuning_guide.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -210,8 +215,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-
-data/
-*.csv
-*.parquet
