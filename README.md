@@ -29,7 +29,7 @@ In zero shot mode, this model recieves the preprocessed text to be classified al
 
 ## Evaluation of the models
 
-Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluation/eval_dataset_clean.parquet`) assembled from the public sources below — see `evaluation/create_eval_dataset.ipynb` for the full build logic. These sources were chosen for their fit to the task and their low label-noise ratio, and are kept entirely separate from any future fine-tuning data.
+Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluation/eval_dataset_clean.parquet` - excluded from version control) assembled from the public sources below — see [evaluation/create_eval_dataset.ipynb](evaluation/create_eval_dataset.ipynb) for the full build logic. These sources were chosen for their fit to the task and their low label-noise ratio, and are kept entirely separate from any future fine-tuning data.
 
 | Source | Threat class | Rows | Notes |
 |---|---|---|---|
@@ -205,7 +205,7 @@ Before a prompt reaches the LLM, it passes through a 7-step sanitisation pipelin
 
 The pipeline returns both the cleaned text and a list of pattern hit names, both of which are available for downstream logic.
 
-See [demo/smoke_preprocessing.py](demo/smoke_preprocessing.py) for a runnable example of each step.
+See [demo/preprocessing_demo.py](demo/preprocessing_demo.py) for a runnable example of each step.
 
 ## Demo
 

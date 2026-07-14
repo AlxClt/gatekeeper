@@ -13,7 +13,7 @@ from verification.preprocessing import preprocess
 logger = logging.getLogger("uvicorn.error")
 
 _PROMPTS_PATH = Path(__file__).parent / "prompts" / f"{os.getenv('PROMPT_NAME', 'default')}.yaml"
-MAX_RETRIES = int(os.environ['LLM_RETRY_CALLS'])
+MAX_RETRIES = int(os.getenv('LLM_RETRY_CALLS', '0'))
 
 class MalformedLLMOutputException(Exception):
 
@@ -73,7 +73,7 @@ class Verifier:
         result_raw = await self._classify(text)
         preprocessed = await self._preprocess(text)
         result_clean = await self._classify(preprocessed)
-        result = 1 if (result_raw or result_clean) else 0
+        result = max(result_raw, result_clean)
         await self.db_logger.log(text, result)
         return result
     

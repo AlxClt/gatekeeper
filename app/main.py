@@ -25,7 +25,7 @@ def _warmup_prompt() -> str:
 
 
 async def _wait_for_local_model():
-    url = os.getenv("LOCAL_LLM_URL", "http://llm:11434")
+    url = os.getenv("LOCAL_LLM_URL", "http://llm:11434").rstrip('/')
     model = os.getenv("LOCAL_LLM_MODEL", "llama3.2")
     logger.info(f"Waiting for model '{model}' to be available in Ollama...")
     async with httpx.AsyncClient() as client:
