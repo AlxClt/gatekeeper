@@ -53,6 +53,8 @@ Full per-model evaluation details are reported in [`evaluation/results.md`](eval
 | qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
 | *TBD* | Fine-tuned | | | | |
 
+**Note:** The gatekeeper API can be run independantly from the evaluation part. If you want to run your own tests with the notebooks in `evaluation/`, you should also install the requirments in `evaluation/requirements.txt`.
+
 ## Structure
 
 ```
@@ -174,6 +176,7 @@ Content-Type: application/json
 | `LLM_BACKEND` | `online` | Set automatically by which compose files you run (see above); uncomment in `.env` only to force a value regardless of the compose invocation |
 | `PROMPT_NAME` | `default` | Selects `app/verification/prompts/<name>.yaml`. Must be set to a file that exists (`default-3b` or `default-9b`) — there is no `default.yaml` |
 | `LLM_THINK` | `false` | Disable reasoning/"thinking" output for hybrid reasoning models (e.g. qwen3, deepseek-r1) so the raw response is just the bare `0`/`1`. Ignored by non-reasoning models. `gpt-oss` models require `low`/`medium`/`high` instead of a boolean |
+| `LLM_RETRY_CALLS` | `3` | Maximum retries while calling the LLM server (online or local) |
 | `LOCAL_LLM_MODEL` | `llama3.2` | Model name to pull and run in Ollama |
 | `ONLINE_LLM_API_KEY` | — | API key for the online provider |
 | `ONLINE_LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL (OpenAI, Groq, Azure, etc.) |

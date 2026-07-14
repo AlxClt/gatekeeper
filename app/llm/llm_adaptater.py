@@ -46,7 +46,6 @@ class LocalAdapter(LLMInterface):
             response.raise_for_status()
             return response.json()["response"]
 
-
 class OnlineAdapter(LLMInterface):
     """OpenAI-compatible adapter — works with OpenAI, Azure OpenAI, Groq, Together.ai, etc."""
 

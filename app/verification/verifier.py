@@ -1,7 +1,9 @@
 import os
+import time
 import logging
 from pathlib import Path
 
+import httpx
 import yaml
 
 from db.logger import DBLogger
@@ -11,6 +13,14 @@ from verification.preprocessing import preprocess
 logger = logging.getLogger("uvicorn.error")
 
 _PROMPTS_PATH = Path(__file__).parent / "prompts" / f"{os.getenv('PROMPT_NAME', 'default')}.yaml"
+MAX_RETRIES = int(os.environ['LLM_RETRY_CALLS'])
+
+class MalformedLLMOutputException(Exception):
+
+    def __init__(self, LLMoutput:str, message=None):
+        if message is None:
+            message = f"Malformed LLM output: {LLMoutput}"
+        super().__init__(message)
 
 class Verifier:
     def __init__(self, llm: LLMInterface, db_logger: DBLogger):
@@ -21,13 +31,35 @@ class Verifier:
         """Preprocesses the candidate prompt, returns cleaned prompt (not threatless, but )"""
         preprocessed = preprocess(text).text
         return preprocessed
- 
+    
     async def _classify(self, text: str) -> int:
         # Note: yaml kept for future extensibility
+        n_retries = 0
         template = yaml.safe_load(_PROMPTS_PATH.read_text())
         prompt = template.replace("{{input}}", text)
-        response = await self.llm.complete(prompt)
-        return self._parse_result(response)
+        while n_retries<=MAX_RETRIES:
+            try:
+                response = await self.llm.complete(prompt)
+                classification_result = self._parse_result(response)
+            except httpx.HTTPError as exc:
+                n_retries+=1
+                time.sleep(0.5)
+                if n_retries>=MAX_RETRIES: #> for the case where MAX_RETRIES=0
+                    raise exc
+                else:
+                    logger.warning(f"LLM Server error {str(exc)} - retrying ({n_retries}/{MAX_RETRIES})...")
+            except MalformedLLMOutputException:
+                n_retries+=1
+                if n_retries>=MAX_RETRIES:
+                    logger.warning("Malformed LLM output detected after maximum retries reached - defaulting to 1")
+                    classification_result = 1
+                else:
+                    logger.warning(f"Malformed LLM output returned - retrying ({n_retries}/{MAX_RETRIES})...")
+            else:
+                break
+
+        return classification_result    
+                
        
     async def verify(self, text: str) -> tuple[int, str]:
         """Single-pass: preprocess then classify. Returns (result, preprocessed_text)."""
@@ -49,5 +81,7 @@ class Verifier:
     def _parse_result(response: str) -> int:
         stripped = response.strip()
         if stripped not in ("0", "1"):
-            logger.warning(f"Unexpected LLM response: {stripped!r} — defaulting to 1")
+            raise MalformedLLMOutputException(LLMoutput=stripped)
         return 0 if stripped == "0" else 1
+
+
