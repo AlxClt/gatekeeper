@@ -29,7 +29,7 @@ In zero shot mode, this model recieves the preprocessed text to be classified al
 
 ## Evaluation of the models
 
-Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluation/eval_dataset_clean.parquet` - excluded from version control) assembled from the public sources below — see [evaluation/create_eval_dataset.ipynb](evaluation/create_eval_dataset.ipynb) for the full build logic. These sources were chosen for their fit to the task and their low label-noise ratio, and are kept entirely separate from any future fine-tuning data.
+Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluation/eval_dataset_clean.parquet` - excluded from version control) assembled from the public sources below — see [data/main_create_datasets.py](data/main_create_datasets.py) for the full build logic. These sources were chosen for their fit to the task and their low label-noise ratio, and are kept entirely separate from any future fine-tuning data.
 
 | Source | Threat class | Rows | Notes |
 |---|---|---|---|
@@ -41,7 +41,7 @@ Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluat
 | [`allenai/wildguardmix`](https://huggingface.co/datasets/allenai/wildguardmix) (`wildguardtest`) | benign | 945 | Plain benign negatives, filtered to `unharmful`-labeled prompts. Gated dataset (requires `HF_TOKEN`). |
 | [`neuralchemy/Prompt-injection-dataset`](https://huggingface.co/datasets/neuralchemy/Prompt-injection-dataset) (`:clean` slice) | LLM01 / LLM07 | 254 (220 LLM01 / 34 LLM07) | Multi-category taxonomy dataset; only categories judged clean/unambiguous enough for eval are kept (e.g. `agent_manipulation`, `instruction_override`, `rag_poisoning`, `system_extraction`). |
 
-Full per-model evaluation details are reported in [`evaluation/results.md`](evaluation/results.md). Here is the global models comparison:
+Full per-model evaluation details are reported in [`evaluation/readme.md`](evaluation/readme.md). Here is the global models comparison:
 
 | Model | Category | precision | recall | f1 | fpr |
 |---|---|---|---|---|---|
@@ -82,10 +82,12 @@ gatekeeper/
 │   ├── demo_prompt.txt           # sample prompt for the demo
 │   ├── smoke_preprocessing.py    # standalone smoke test for the preprocessing pipeline
 │   └── attack_demo.py            # 30-prompt attack technique demo (one-pass vs two-pass)
-├── evaluation/                   # dataset curation + zero-shot evaluation notebooks
-│   ├── create_eval_dataset.ipynb # builds eval_dataset_clean.parquet / train_raw.parquet
+├── data/                          # dataset curation: builds eval_dataset_clean.parquet / train_raw.parquet
+│   ├── main_create_datasets.py   # entry point — combines, dedups, and partitions all sources
+│   └── dataset_loaders.py        # per-source loading/mapping logic imported by main_create_datasets.py
+├── evaluation/                   # zero-shot evaluation notebook
 │   ├── evaluation.ipynb          # runs the clean eval set through POST /verify, computes metrics
-│   └── results.md                # per-model precision/recall/F1/FPR results
+│   └── readme.md                 # per-model precision/recall/F1/FPR results
 └── db/init.sql                   # logs table schema
 ```
 

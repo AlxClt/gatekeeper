@@ -1,6 +1,6 @@
-# Gatekeeper Evaluation Results
+# Gatekeeper Evaluation
 
-Results from [`evaluation.ipynb`](evaluation.ipynb) — prompt-injection (LLM01) and system-prompt-leakage (LLM07), run one-pass (`POST /verify`) against the clean eval set built in [`create_eval_dataset.ipynb`](create_eval_dataset.ipynb) (`eval_dataset_clean.parquet`).
+Results from [`evaluation.ipynb`](evaluation.ipynb) — prompt-injection (LLM01) and system-prompt-leakage (LLM07), run one-pass (`POST /verify`) against the clean eval set built in [`../data/main_create_datasets.py`](../data/main_create_datasets.py) (`eval_dataset_clean.parquet`).
 
 **Models compared:**
 

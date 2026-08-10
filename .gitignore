@@ -2,7 +2,6 @@
 architecture/
 useful.txt
 *.docx
-data/
 *.csv
 *.parquet
 TO DOCUMENT.txt
