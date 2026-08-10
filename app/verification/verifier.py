@@ -53,6 +53,7 @@ class Verifier:
                 if n_retries>=MAX_RETRIES:
                     logger.warning("Malformed LLM output detected after maximum retries reached - defaulting to 1")
                     classification_result = 1
+                    break
                 else:
                     logger.warning(f"Malformed LLM output returned - retrying ({n_retries}/{MAX_RETRIES})...")
             else:
