@@ -1,5 +1,5 @@
+import asyncio
 import os
-import time
 import logging
 from pathlib import Path
 
@@ -43,7 +43,7 @@ class Verifier:
                 classification_result = self._parse_result(response)
             except httpx.HTTPError as exc:
                 n_retries+=1
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
                 if n_retries>=MAX_RETRIES: #> for the case where MAX_RETRIES=0
                     raise exc
                 else:
