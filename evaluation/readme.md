@@ -88,13 +88,13 @@ Note: comparison is only meaningful within a category — models were run on dif
 
 | Model | Category | average time per request (seconds) |
 |---|---|---|
-| llama3.2:3b | Zero-shot 3B | 0.087 |
-| qwen2.5:3b | Zero-shot 3B | 0.081 |
-| gemma3:4b | Zero-shot 3B | 0.111 |
-| llama3.1:8b | Zero-shot 9B | 0.106 |
-| gemma2:9b | Zero-shot 9B | 0.121 |
-| qwen3:8b | Zero-shot 9B | 0.096 |
-| gemma4:12b | Zero-shot 12B | 0.125 |
+| llama3.2:3b | Zero-shot 3B | 0.87 |
+| qwen2.5:3b | Zero-shot 3B | 0.81 |
+| gemma3:4b | Zero-shot 3B | 1.11 |
+| llama3.1:8b | Zero-shot 9B | 1.06 |
+| gemma2:9b | Zero-shot 9B | 1.21 |
+| qwen3:8b | Zero-shot 9B | 0.96 |
+| gemma4:12b | Zero-shot 12B | 1.25 |
 | _TBD_ | Fine-tuned | |
 
 ---
