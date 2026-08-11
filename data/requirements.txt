@@ -4,3 +4,4 @@ datasets>=4.8
 huggingface_hub>=1.15
 tqdm>=4.67
 ipywidgets>=8.1
+httpx>=0.27

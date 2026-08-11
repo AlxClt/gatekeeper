@@ -110,3 +110,21 @@ that pre-separates harmful content from injection at the label level (`0=benign`
 `in_scope=False` rather than dropped.
 
 64,247 rows after cross-source dedup, no train/test split applied.
+
+## Distilled training data
+
+`train_distilled.parquet` — `train_raw.parquet` with its labeling noise filtered down by the
+zero-shot classifier itself. Built by [`distill_train_set.py`](distill_train_set.py), which runs
+every row through a live gatekeeper `/verify` endpoint and drops rows labeled `1` (threat) that
+the model didn't also predict as a threat. Everything else — every `label=0` row, and every
+`label=1` row the model agrees with — is kept unchanged.
+
+This is knowledge distillation: `train_raw.parquet` is pooled from sources that were never
+manually audited row-by-row (unlike the evaluation set, see above), so a meaningful share of its
+`label=1` rows are mislabeled or too ambiguous to count as a real attack. Rather than hand-review
+64K rows, the already-evaluated zero-shot classifier is used as a cheap, consistent labeling
+filter: the gatekeeper API should be pointed at the **best-performing 9B model** and its matching
+prompt (`app/verification/prompts/default-9b.yaml`) — see `evaluation/readme.md` for current
+per-model numbers — since it's the strongest classifier judgment available before any fine-tuned
+model exists to bootstrap from. Run `distill_train_set.py` against that configuration to produce
+`train_distilled.parquet`.
