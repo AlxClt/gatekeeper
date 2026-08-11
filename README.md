@@ -82,9 +82,14 @@ gatekeeper/
 │   ├── demo_prompt.txt           # sample prompt for the demo
 │   ├── smoke_preprocessing.py    # standalone smoke test for the preprocessing pipeline
 │   └── attack_demo.py            # 30-prompt attack technique demo (one-pass vs two-pass)
-├── data/                          # dataset curation: builds eval_dataset_clean.parquet / train_raw.parquet
-│   ├── main_create_datasets.py   # entry point — combines, dedups, and partitions all sources
-│   └── dataset_loaders.py        # per-source loading/mapping logic imported by main_create_datasets.py
+├── data/                          # dataset curation: eval/train/consolidated parquet build pipeline
+│   ├── main_create_datasets.py           # entry point — combines, dedups, and partitions all sources
+│   ├── main_distill_train_set.py         # entry point — filters train_raw.parquet via a live gatekeeper
+│   ├── main_train_set_consolidation.py   # entry point — dedup + diversity-sample + append handcrafted LLM07
+│   └── helpers/                          # non-entry-point modules imported by the main_*.py scripts above
+│       ├── dataset_loaders.py            # per-source loading/mapping logic
+│       ├── near_duplicates.py            # MinHash LSH near-duplicate removal
+│       └── diversity_sampling.py         # embedding + PCA + per-source max-min dispersion sampling
 ├── evaluation/                   # zero-shot evaluation notebook
 │   ├── evaluation.ipynb          # runs the clean eval set through POST /verify, computes metrics
 │   └── readme.md                 # per-model precision/recall/F1/FPR results

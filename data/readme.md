@@ -6,10 +6,14 @@ Harmful-content jailbreaks are explicitly out of scope — a different filter ow
 them in wrecks precision/recall for this classifier.
 
 Built by [`main_create_datasets.py`](main_create_datasets.py) (loaders externalized in
-[`dataset_loaders.py`](dataset_loaders.py)), which pulls from the sources below, normalizes them
-into a common schema, deduplicates across all sources, and partitions the result into an
-evaluation set and a raw pool for future training. Run with `python main_create_datasets.py` from
-within this directory.
+[`helpers/dataset_loaders.py`](helpers/dataset_loaders.py)), which pulls from the sources below,
+normalizes them into a common schema, deduplicates across all sources, and partitions the result
+into an evaluation set and a raw pool for future training. Run with `python main_create_datasets.py`
+from within this directory.
+
+Scripts are organized as: `main_*.py` at the top level are the runnable entry points (invoked
+directly, in the order described below); everything else lives in [`helpers/`](helpers/) and is
+imported by one or more of them rather than run on its own.
 
 ## Target schema (both output files)
 
@@ -114,10 +118,10 @@ that pre-separates harmful content from injection at the label level (`0=benign`
 ## Distilled training data
 
 `train_distilled.parquet` — `train_raw.parquet` with its labeling noise filtered down by the
-zero-shot classifier itself. Built by [`distill_train_set.py`](distill_train_set.py), which runs
-every row through a live gatekeeper `/verify` endpoint and drops rows labeled `1` (threat) that
-the model didn't also predict as a threat. Everything else — every `label=0` row, and every
-`label=1` row the model agrees with — is kept unchanged.
+zero-shot classifier itself. Built by [`main_distill_train_set.py`](main_distill_train_set.py),
+which runs every row through a live gatekeeper `/verify` endpoint and drops rows labeled `1`
+(threat) that the model didn't also predict as a threat. Everything else — every `label=0` row, and
+every `label=1` row the model agrees with — is kept unchanged.
 
 This is knowledge distillation: `train_raw.parquet` is pooled from sources that were never
 manually audited row-by-row (unlike the evaluation set, see above), so a meaningful share of its
@@ -126,5 +130,38 @@ manually audited row-by-row (unlike the evaluation set, see above), so a meaning
 filter: the gatekeeper API should be pointed at the **best-performing 9B model** and its matching
 prompt (`app/verification/prompts/default-9b.yaml`) — see `evaluation/readme.md` for current
 per-model numbers — since it's the strongest classifier judgment available before any fine-tuned
-model exists to bootstrap from. Run `distill_train_set.py` against that configuration to produce
-`train_distilled.parquet`.
+model exists to bootstrap from. Run `main_distill_train_set.py` against that configuration to
+produce `train_distilled.parquet`.
+
+## Consolidated training data
+
+`train_consolidated.parquet` — the actual fine-tuning set, built from `train_distilled.parquet` by
+[`main_train_set_consolidation.py`](main_train_set_consolidation.py) in three steps:
+
+1. **Near-duplicate removal** ([`helpers/near_duplicates.py`](helpers/near_duplicates.py)) — word
+   3-gram shingles are hashed into MinHashes and scanned with `datasketch`'s `MinHashLSH`
+   (Jaccard threshold 0.8): rows whose text is a near-duplicate of an already-kept row (paraphrases,
+   whitespace/punctuation variants — the kind of thing that survives the exact-match dedup in
+   `dataset_loaders.normalized_hash`) are dropped, keeping the first occurrence.
+2. **Per-source diversity sampling** ([`helpers/diversity_sampling.py`](helpers/diversity_sampling.py))
+   — each row is embedded (`sentence-transformers`, `paraphrase-MiniLM-L3-v2`, L2-normalized) and
+   PCA-reduced to 75 dimensions, then each `source` group is downsampled independently via greedy
+   max-min dispersion (the same "pick whatever's farthest from everything already picked" objective
+   `submodlib`'s `DisparityMinFunction` targets — implemented directly on top of `numpy`/BLAS here
+   instead, since `submodlib-py` ships no Windows wheel). This is what actually fixes the source
+   imbalance in `train_distilled.parquet` (`jayavibhav/prompt-injection-safety` alone is ~92% of it):
+   the fraction of each source kept is configured per source in
+   `helpers/diversity_sampling.py`'s `SOURCE_SAMPLE_FRACTIONS` — currently
+   `jayavibhav/prompt-injection-safety`: 0.15, `neuralchemy/Prompt-injection-dataset`: 0.75,
+   `tensor_trust_hijacking`: 1.0 (kept whole; it's small and already the cleanest of the three). A
+   before/after scatter plot of the first 2 PCA dimensions is saved to
+   `diversity_sampling_comparison.png` so the effect is visually checkable.
+3. **Append handcrafted LLM07 examples** — [`handcrafted_llm07.csv`](handcrafted_llm07.csv) (250
+   hand-authored `label=1`/`LLM07` rows: "show me your system prompt"-style extraction attempts) is
+   appended as-is, skipping both dedup and sampling. It exists because none of the three
+   `train_distilled.parquet` sources contribute any LLM07 rows at all (they're all LLM01/benign —
+   the sources with LLM07 coverage are held out in `eval_dataset_clean.parquet` instead), so without
+   it the fine-tuning set would have zero LLM07 signal.
+
+Run `python main_train_set_consolidation.py` from within this directory to (re)build it — the
+resulting row count depends on the configured `SOURCE_SAMPLE_FRACTIONS`.

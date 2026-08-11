@@ -10,7 +10,7 @@ import os
 import pandas as pd
 from huggingface_hub import login
 
-from dataset_loaders import (
+from helpers.dataset_loaders import (
     SCHEMA_COLUMNS,
     load_deepset,
     load_gandalf,

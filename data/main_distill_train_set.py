@@ -7,7 +7,7 @@ row the model predicts as `0` is training-label noise the model doesn't even rec
 attack under its own zero-shot judgment, and gets dropped too.
 
 Requires a running gatekeeper server — point BASE_URL at it before running:
-`python distill_train_set.py`.
+`python main_distill_train_set.py`.
 """
 
 import asyncio
@@ -17,7 +17,7 @@ import httpx
 import pandas as pd
 from tqdm import tqdm
 
-from dataset_loaders import SCHEMA_COLUMNS
+from helpers.dataset_loaders import SCHEMA_COLUMNS
 
 BASE_URL = "http://localhost:8000"  # gatekeeper server
 CONCURRENCY = 10                    # concurrent requests
