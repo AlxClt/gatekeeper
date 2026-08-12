@@ -1,7 +1,7 @@
 """Per-source loaders for the gatekeeper evaluation/training data build.
 
 Each loader returns a DataFrame already reshaped into the target schema
-(text, label, source, threat_class, in_scope) so main_create_datasets.py only
+(text, label, source, threat_class) so main_create_datasets.py only
 has to combine, dedup, partition, and save. See readme.md for the dataset
 list and the rationale behind each source's scope/mapping.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from datasets import concatenate_datasets, load_dataset
 
-SCHEMA_COLUMNS = ["text", "label", "source", "threat_class", "in_scope"]
+SCHEMA_COLUMNS = ["text", "label", "source", "threat_class"]
 
 
 def read_env(env_path: str = "../.env") -> dict:
@@ -58,19 +58,18 @@ def _aligned(value, n: int):
     return value.reset_index(drop=True) if isinstance(value, pd.Series) else value
 
 
-def finalize(df: pd.DataFrame, *, text_col: str, label, source: str, threat_class, in_scope) -> pd.DataFrame:
-    """Select/rename into {text, label, source, threat_class, in_scope}.
+def finalize(df: pd.DataFrame, *, text_col: str, label, source: str, threat_class) -> pd.DataFrame:
+    """Select/rename into {text, label, source, threat_class}.
 
-    `text_col` is always a column name pulled from `df`. `label`, `threat_class`, and `in_scope`
-    are each either a constant (applied to every row) or an already-computed `pd.Series` aligned
-    positionally to `df` (e.g. `df["label"]` or `df["label"].map(...)`).
+    `text_col` is always a column name pulled from `df`. `label` and `threat_class` are each either
+    a constant (applied to every row) or an already-computed `pd.Series` aligned positionally to
+    `df` (e.g. `df["label"]` or `df["label"].map(...)`).
     """
     n = len(df)
     out = pd.DataFrame({"text": _aligned(df[text_col], n)})
     out["label"] = _aligned(label, n)
     out["source"] = source
     out["threat_class"] = _aligned(threat_class, n)
-    out["in_scope"] = _aligned(in_scope, n)
     return out[SCHEMA_COLUMNS]
 
 
@@ -90,25 +89,25 @@ def load_tensor_trust_hijacking(url: str) -> pd.DataFrame:
     raw = try_fetch(lambda: pd.read_json(url, lines=True), source="tensor_trust_hijacking", hint=_TENSOR_TRUST_HINT)
     if raw is None:
         return pd.DataFrame(columns=SCHEMA_COLUMNS)
-    return finalize(raw, text_col="attack", label=1, source="tensor_trust_hijacking", threat_class="LLM01", in_scope=True)
+    return finalize(raw, text_col="attack", label=1, source="tensor_trust_hijacking", threat_class="LLM01")
 
 
 def load_tensor_trust_extraction(url: str) -> pd.DataFrame:
     raw = try_fetch(lambda: pd.read_json(url, lines=True), source="tensor_trust_extraction", hint=_TENSOR_TRUST_HINT)
     if raw is None:
         return pd.DataFrame(columns=SCHEMA_COLUMNS)
-    return finalize(raw, text_col="attack", label=1, source="tensor_trust_extraction", threat_class="LLM07", in_scope=True)
+    return finalize(raw, text_col="attack", label=1, source="tensor_trust_extraction", threat_class="LLM07")
 
 
 # ── jayavibhav/prompt-injection-safety ──────────────────────────────────────
 #
 # The only large set that pre-separates harmful content from injection at the label level:
-# 0=benign, 1=prompt injection, 2=direct harmful request. Label 2 is retained for audit but
-# excluded from scoring (in_scope=False).
+# 0=benign, 1=prompt injection, 2=direct harmful request. Label 2 is retained (tagged
+# threat_class=harmful_content for audit) but scored as label=0 — no injection present, so a `0`
+# classifier output is correct for it.
 
 _JAYAVIBHAV_LABEL = {0: 0, 1: 1, 2: 0}  # harmful_content (2) scores as 0 — no injection present
 _JAYAVIBHAV_THREAT_CLASS = {0: "benign", 1: "LLM01", 2: "harmful_content"}
-_JAYAVIBHAV_IN_SCOPE = {0: True, 1: True, 2: False}
 
 
 def load_jayavibhav() -> pd.DataFrame:
@@ -119,7 +118,6 @@ def load_jayavibhav() -> pd.DataFrame:
         label=raw["label"].map(_JAYAVIBHAV_LABEL),
         source="jayavibhav/prompt-injection-safety",
         threat_class=raw["label"].map(_JAYAVIBHAV_THREAT_CLASS),
-        in_scope=raw["label"].map(_JAYAVIBHAV_IN_SCOPE),
     )
 
 
@@ -173,7 +171,6 @@ def load_neuralchemy() -> dict[str, pd.DataFrame]:
             label=clean["label"],
             source="neuralchemy/Prompt-injection-dataset:clean",
             threat_class=clean["category"].map(_NEURALCHEMY_CATEGORY_THREAT_CLASS),
-            in_scope=True,
         ),
         "neuralchemy/Prompt-injection-dataset": finalize(
             rest,
@@ -181,7 +178,6 @@ def load_neuralchemy() -> dict[str, pd.DataFrame]:
             label=rest["label"],
             source="neuralchemy/Prompt-injection-dataset",
             threat_class=rest["category"].map(_NEURALCHEMY_CATEGORY_THREAT_CLASS),
-            in_scope=True,
         ),
     }
 
@@ -194,7 +190,7 @@ def load_neuralchemy() -> dict[str, pd.DataFrame]:
 
 def load_gandalf() -> pd.DataFrame:
     raw = load_full_dataset("Lakera/gandalf_ignore_instructions")
-    return finalize(raw, text_col="text", label=1, source="Lakera/gandalf_ignore_instructions", threat_class="LLM07", in_scope=True)
+    return finalize(raw, text_col="text", label=1, source="Lakera/gandalf_ignore_instructions", threat_class="LLM07")
 
 
 # ── leolee99/NotInject — over-defense / FPR probe ───────────────────────────
@@ -205,7 +201,7 @@ def load_gandalf() -> pd.DataFrame:
 
 def load_notinject() -> pd.DataFrame:
     raw = load_full_dataset("leolee99/NotInject")
-    return finalize(raw, text_col="prompt", label=0, source="leolee99/NotInject", threat_class="benign", in_scope=True)
+    return finalize(raw, text_col="prompt", label=0, source="leolee99/NotInject", threat_class="benign")
 
 
 # ── allenai/wildguardmix (wildguardtest config) — plain benign negatives ───
@@ -227,7 +223,7 @@ def load_wildguard() -> pd.DataFrame:
         return pd.DataFrame(columns=SCHEMA_COLUMNS)
 
     benign = raw[raw["prompt_harm_label"] == "unharmful"]
-    return finalize(benign, text_col="prompt", label=0, source="allenai/wildguardmix", threat_class="benign", in_scope=True)
+    return finalize(benign, text_col="prompt", label=0, source="allenai/wildguardmix", threat_class="benign")
 
 
 # ── deepset/prompt-injections — regression anchor ───────────────────────────
@@ -251,4 +247,4 @@ def load_deepset(csv_path: str) -> pd.DataFrame:
 def load_xstest() -> pd.DataFrame:
     prompts = load_dataset("natolambert/xstest-v2-copy")["prompts"].to_pandas()
     safe = prompts[~prompts["type"].str.startswith("contrast_")]
-    return finalize(safe, text_col="prompt", label=0, source="natolambert/xstest-v2-copy", threat_class="benign", in_scope=True)
+    return finalize(safe, text_col="prompt", label=0, source="natolambert/xstest-v2-copy", threat_class="benign")

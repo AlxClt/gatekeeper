@@ -3,6 +3,7 @@ architecture/
 useful.txt
 *.docx
 *.csv
+*.png
 *.parquet
 TO DOCUMENT.txt
 finetuning_guide.pdf

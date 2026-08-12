@@ -1,10 +1,9 @@
 """Filters train_raw.parquet down to rows the gatekeeper model actually agrees are threats.
 
-Drops out-of-scope rows (`in_scope=False`) entirely, then sends only the remaining `label=1` rows
-through a live gatekeeper `/verify` endpoint (same one-pass call as evaluation/evaluation.ipynb) —
-`label=0` rows don't need a model opinion, so they're kept as-is without an API call. Any `label=1`
-row the model predicts as `0` is training-label noise the model doesn't even recognize as an
-attack under its own zero-shot judgment, and gets dropped too.
+Sends every `label=1` row through a live gatekeeper `/verify` endpoint (same one-pass call as
+evaluation/evaluation.ipynb) — `label=0` rows don't need a model opinion, so they're kept as-is
+without an API call. Any `label=1` row the model predicts as `0` is training-label noise the model
+doesn't even recognize as an attack under its own zero-shot judgment, and gets dropped too.
 
 Requires a running gatekeeper server — point BASE_URL at it before running:
 `python main_distill_train_set.py`.
@@ -67,9 +66,6 @@ def main() -> None:
     df = pd.read_parquet(TRAIN_RAW_PATH)
     df = df.dropna(subset=["text"]).reset_index(drop=True)
     print(f"Loaded {len(df)} rows from {TRAIN_RAW_PATH}")
-
-    df = df[df["in_scope"]].reset_index(drop=True)
-    print(f"{len(df)} rows remain after dropping in_scope=False")
 
     positives = df[df["label"] == 1].reset_index(drop=True)
     negatives = df[df["label"] == 0].reset_index(drop=True)
