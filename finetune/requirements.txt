@@ -1,0 +1,11 @@
+torch>=2.3
+transformers>=4.44
+peft>=0.12
+bitsandbytes>=0.43
+accelerate>=0.33
+pandas
+pyarrow
+scikit-learn
+tensorboard
+pyyaml
+matplotlib

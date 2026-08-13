@@ -1,13 +1,13 @@
 # Data
 
 This folder contains scripts building a clean, held-out **evaluation set** for
-benchmarking gatekeeper models zero-shot, and a **training set** for fine-tuning one, both scoped to
+benchmarking gatekeeper models, and a **training set** for fine-tuning one, both scoped to
 **OWASP LLM01** (prompt injection / instruction hijacking) and **LLM07** (system-prompt / secret
 extraction), as scoped in the repo's main Readme.
 
-It is a one time data curation job, but is **not directly reproducible from a clean checkout**: building the evaluation set requires
+These scripts run a one time data curation job, but it is **not directly reproducible from a clean checkout**: building the evaluation set requires
 [`deepset_relabeled.csv`](deepset_relabeled.csv), a manually relabeled copy of
-`deepset/prompt-injections` checked into this folder (it has been relabled to alogn with the genreal interpretation of LLM01 used in this project), and building the training set requires
+`deepset/prompt-injections` checked into this folder (it has been relabled to align with the genreal interpretation of LLM01 used in this project), and building the training set requires
 [`handcrafted_llm07.csv`](handcrafted_llm07.csv), 250 hand-authored LLM07 examples. These files can be obtained by contacting the author of the repo directly, everything else is either fetched from the Hugging Face Hub /
 GitHub on demand, or derived from those two by the scripts described below.
 
@@ -64,12 +64,7 @@ Notes on individual sources:
   instructions" / "start over" / "reveal your secret" variants, with indirect injection,
   tool-poisoning, multi-turn escalation, or encoding-based obfuscation essentially absent. The
   benign/injection boundary is also inconsistently drawn in places — structurally similar phrasing
-  ends up on both sides of the label. A dataset survey
-  ([Cyber Threat Intelligence for AI Systems, arXiv:2603.05068](https://arxiv.org/abs/2603.05068))
-  tiers this dataset "Recommended", but flags its sibling `jayavibhav/prompt-injection` (larger,
-  binary-label) as "Use with caution" for label-quality reasons — the same reservation plausibly
-  applies here. This is exactly why the training pipeline doesn't use it as-is; see
-  [Training set](#training-set) below.
+  ends up on both sides of the label.
 - **`neuralchemy/Prompt-injection-dataset`** ships a `core` config (originals only) and a `full`
   config (`core` plus paraphrase-augmented positives); only `core` is used, filtered to
   `augmented == False`. Its `category` field is filtered to a whitelist and mapped to
