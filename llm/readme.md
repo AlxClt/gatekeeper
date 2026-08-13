@@ -1,0 +1,1 @@
+This folder contains the dockerfile and entrypoint script for running gatekeeper with a local verifier llm model.
