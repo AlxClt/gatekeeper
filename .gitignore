@@ -6,7 +6,7 @@ useful.txt
 *.png
 *.parquet
 TO DOCUMENT.txt
-finetuning_guide.pdf
+*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

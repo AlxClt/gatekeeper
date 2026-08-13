@@ -50,6 +50,7 @@ transfer in step 5.
 ## 4. Get the code onto the pod
 
 ```bash
+cd workspace
 git clone <your-gatekeeper-repo-url>
 cd gatekeeper
 ```

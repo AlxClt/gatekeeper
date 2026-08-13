@@ -194,6 +194,9 @@ def main() -> None:
     (output_dir / "training_config.json").write_text(json.dumps(vars(args), indent=2))
 
     tb_logdir = output_dir / "tensorboard"
+    # transformers>=5 dropped TrainingArguments(logging_dir=...) — TensorBoardCallback now reads
+    # this env var instead (defaults to output_dir/runs/... if unset).
+    os.environ["TENSORBOARD_LOGGING_DIR"] = str(tb_logdir)
     launch_tensorboard(tb_logdir, args.tensorboard_port)
 
     model, tokenizer = load_model_and_tokenizer(args)
@@ -213,12 +216,11 @@ def main() -> None:
         num_train_epochs=args.epochs,
         learning_rate=args.lr,
         lr_scheduler_type="cosine",
-        warmup_ratio=args.warmup_ratio,
+        warmup_steps=args.warmup_ratio,
         bf16=True,
         gradient_checkpointing=True,
         optim="paged_adamw_8bit",
         max_grad_norm=0.3,
-        logging_dir=str(tb_logdir),
         logging_steps=10,
         eval_strategy="steps",
         eval_steps=args.eval_steps,
