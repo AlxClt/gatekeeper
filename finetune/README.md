@@ -35,11 +35,24 @@ different training) and gives the fine-tune a head start on following the task.
 ### Method: QLoRA
 
 Full fine-tuning a 9B model needs multiple high-memory GPUs; QLoRA (4-bit NF4 base weights via
-`bitsandbytes`, trainable LoRA adapters via `peft` on all attention + MLP projections) fits
-comfortably on a single 24GB GPU, which is the class of pod this is meant to run on (RunPod, one
-GPU, no multi-node/distributed training — out of scope here to keep the script simple). LoRA rank
-16 / alpha 32 / dropout 0.05 are conservative, standard QLoRA defaults for a task this narrow
-(binary classification, not open-ended generation) — no need for a larger rank.
+`bitsandbytes`, trainable LoRA adapters via `peft` on all attention + MLP projections) fits a
+single 24-32GB GPU, which is the class of pod this is meant to run on (RunPod, one GPU, no
+multi-node/distributed training — out of scope here to keep the script simple). LoRA rank 16 /
+alpha 32 / dropout 0.05 are conservative, standard QLoRA defaults for a task this narrow (binary
+classification, not open-ended generation) — no need for a larger rank.
+
+**The actual memory bottleneck isn't the quantized weights — it's the classification head.**
+Gemma-2's vocabulary is ~256k tokens, so a training step's `(batch, seq_len, vocab_size)` logits
+tensor is enormous compared to what most QLoRA memory-sizing guides assume (they're usually
+written against a 32k–128k vocab), and `CrossEntropyLoss` upcasts that tensor to fp32 internally
+right at the point of peak memory use — on a batch of 4 at `max_seq_len=1024` that single tensor
+is several GB by itself, on top of the ~5-7GB of quantized weights + tied embeddings + activations.
+That's what actually pushed a 32GB card over the edge at the original defaults. The defaults now
+account for this: `--batch_size 2` / `--grad_accum 8` (same effective batch size as before, 16),
+`--eval_accumulation_steps 5`, non-reentrant gradient checkpointing, and
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` set automatically to cut down on the allocator
+fragmentation the OOM error reports as "reserved but unallocated". If you have a ≥40GB GPU, raise
+`--batch_size` back up (lowering `--grad_accum` to compensate) for faster training.
 
 ### Prompt: short, not the zero-shot prompt
 
@@ -88,11 +101,11 @@ fine-tune is trained to do precisely the thing `Verifier._classify` expects.
 | Setting | Value | Why |
 |---|---|---|
 | Epochs | 3 (cap; early stopping usually ends it sooner) | Small dataset (~10.8k rows) fine-tuned with LoRA overfits quickly; 3 passes is already generous |
-| Effective batch size | 16 (`batch_size=4 × grad_accum=4`) | Fits a 24GB GPU with `max_seq_len=1024`; large enough for stable gradients on a binary task |
+| Effective batch size | 16 (`batch_size=2 × grad_accum=8`) | `max_seq_len=1024` combined with Gemma-2's ~256k vocab makes the per-step loss tensor the real memory constraint (see "Method: QLoRA" above), not the model weights — `batch_size=2` is the safe default for a 24-32GB GPU; raise it on a bigger card |
 | Learning rate | 2e-4, cosine schedule, 3% warmup | Standard QLoRA LR — LoRA adapters tolerate higher LR than full fine-tuning since the base weights are frozen |
 | Optimizer | `paged_adamw_8bit` | Keeps optimizer state memory low, standard for QLoRA |
 | Max grad norm | 0.3 | Standard QLoRA clipping value; the 4-bit base makes training more sensitive to gradient spikes |
-| `max_seq_len` | 1024 tokens | Covers >99% of rows (`text` ≤ 4,000 chars + the ~700-char prompt); longer rows are dropped, not truncated mid-sequence, to avoid cutting the label off |
+| `max_seq_len` | 1024 tokens | Covers >99% of rows (`text` ≤ 4,000 chars + the ~700-char prompt); longer rows are dropped, not truncated mid-sequence, to avoid cutting the label off. Lower this first if you still hit OOM after reducing `--batch_size` |
 
 ### Stopping criterion
 
@@ -168,6 +181,12 @@ Deploying the merged model and scoring it with `evaluation/evaluation.ipynb` aga
 pip install -r finetune/requirements.txt
 ```
 
-Needs a CUDA GPU with bf16 support (Ampere or newer — A5000/A6000/4090/A100/L40S-class), ~24GB
-VRAM at the default `batch_size`/`max_seq_len`, and access to the gated `google/gemma-2-9b-it`
-weights (`huggingface-cli login` or set `HF_TOKEN`, same variable the rest of the repo uses).
+Needs a CUDA GPU with bf16 support (Ampere or newer — A5000/A6000/4090/A100/L40S-class), 24-32GB
+VRAM at the default `batch_size`/`max_seq_len` (see "Method: QLoRA" above for why Gemma-2's large
+vocab makes this tighter than a typical 9B QLoRA fine-tune), and access to the gated
+`google/gemma-2-9b-it` weights (`huggingface-cli login` or set `HF_TOKEN`, same variable the rest
+of the repo uses).
+
+**Still OOM at the defaults?** Lower `--max_seq_len` next (e.g. `768`) — it shrinks the same
+per-step loss tensor `--batch_size` does. `--batch_size 1`/`--grad_accum 16` is the floor before
+`max_seq_len` is the only lever left.

@@ -11,10 +11,18 @@ Training status is served live over HTTP via TensorBoard on --tensorboard_port (
 expose that port on the pod to watch loss/eval curves from your local machine (see README).
 """
 
+import os
+
+# Must be set before torch's CUDA allocator initializes. Gemma-2's ~256k vocab makes the
+# (batch, seq, vocab) logits tensor unusually large for a 9B model, and the fp32 upcast
+# CrossEntropyLoss does internally roughly doubles that at the exact peak-memory moment of each
+# step — this reduces the fragmentation (reserved-but-unallocated memory) that otherwise turns a
+# borderline-fitting peak into an actual OOM on 24-32GB cards. See finetune/README.md.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import argparse
 import atexit
 import json
-import os
 import subprocess
 import time
 from pathlib import Path
@@ -47,11 +55,16 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--val_fraction", type=float, default=0.05)
     p.add_argument("--max_seq_len", type=int, default=1024)
     p.add_argument("--epochs", type=float, default=3.0)
-    p.add_argument("--batch_size", type=int, default=4)
-    p.add_argument("--grad_accum", type=int, default=4)
+    # batch_size=2/grad_accum=8 (effective batch 16, same as batch_size=4/grad_accum=4) is the
+    # safe default for 24-32GB cards — see finetune/README.md's memory notes for why gemma-2's
+    # ~256k vocab makes the (batch, seq, vocab) loss tensor the actual memory bottleneck, not the
+    # model weights. Raise --batch_size (and lower --grad_accum to compensate) on a ≥40GB GPU.
+    p.add_argument("--batch_size", type=int, default=2)
+    p.add_argument("--grad_accum", type=int, default=8)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--warmup_ratio", type=float, default=0.03)
     p.add_argument("--eval_steps", type=int, default=200)
+    p.add_argument("--eval_accumulation_steps", type=int, default=5, help="Lower = less GPU memory held during eval (offloads to CPU more often), at some eval-speed cost.")
     p.add_argument("--early_stopping_patience", type=int, default=3)
     p.add_argument("--lora_r", type=int, default=16)
     p.add_argument("--lora_alpha", type=int, default=32)
@@ -219,12 +232,16 @@ def main() -> None:
         warmup_steps=args.warmup_ratio,
         bf16=True,
         gradient_checkpointing=True,
+        # non-reentrant is the modern recommended mode (lower memory, avoids some known reentrant-
+        # checkpointing + frozen-base-model interactions); compatible with prepare_model_for_kbit_training's
+        # enable_input_require_grads() call in load_model_and_tokenizer.
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         optim="paged_adamw_8bit",
         max_grad_norm=0.3,
         logging_steps=10,
         eval_strategy="steps",
         eval_steps=args.eval_steps,
-        eval_accumulation_steps=10,
+        eval_accumulation_steps=args.eval_accumulation_steps,
         save_strategy="steps",
         save_steps=args.eval_steps,
         save_total_limit=3,

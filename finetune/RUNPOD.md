@@ -23,9 +23,10 @@ the way it is (model choice, QLoRA, prompt design, hyperparameters, stopping cri
 
 In the RunPod console, **Deploy a Pod**:
 
-- **GPU**: anything with ≥24GB VRAM (RTX A5000/A6000, RTX 4090, L4/L40, A100, RTX PRO 4500/6000,
-  etc.) — QLoRA on a 9B model is designed to fit this class of single GPU (see
-  `finetune/README.md`'s hyperparameters section). No multi-GPU needed.
+- **GPU**: 24-32GB at the defaults (RTX A5000/A6000, RTX 4090, L4/L40, RTX PRO 4500/6000, etc.),
+  more headroom on ≥40GB (A100/L40S) — QLoRA fits a single GPU here, but Gemma-2's large vocabulary
+  makes the per-step loss tensor tighter than a typical 9B QLoRA fine-tune; see `finetune/README.md`'s
+  "Method: QLoRA" note before assuming 24GB has slack to spare. No multi-GPU needed.
 - **Template**: an official RunPod PyTorch template (e.g. "RunPod PyTorch 2.x") — comes with CUDA
   and a matching torch build already installed, which `bitsandbytes` needs.
 - **Disk**: 60–80GB container/volume disk. `google/gemma-2-9b-it` is ~18GB in bf16, downloaded
@@ -109,9 +110,9 @@ python finetune/train.py
 # detach with Ctrl+B then D; reattach later with: tmux attach -t finetune
 ```
 
-Defaults assume a 24GB+ GPU; if you hit an out-of-memory error, lower `--batch_size` (raising
-`--grad_accum` to compensate) or `--max_seq_len` first — see `finetune/README.md` for what each
-flag controls.
+Defaults (`--batch_size 2`) are already sized for a 24-32GB GPU. If you still hit an out-of-memory
+error, lower `--max_seq_len` next (e.g. `768`) — see `finetune/README.md`'s "Method: QLoRA" note
+for why Gemma-2's vocab size, not the model weights, is what actually drives memory use here.
 
 ## 9. Monitor from your local machine
 
@@ -175,5 +176,5 @@ disk (and lets you resume later at storage-only cost); "Terminate" deletes it en
 | `401`/`403` downloading `google/gemma-2-9b-it` | License not accepted on that HF account, or `HF_TOKEN` not exported / wrong token — redo step 1 and 7 |
 | TensorBoard proxy URL doesn't load | Port 6006 was added as **TCP** instead of **HTTP** in the pod's port settings — HTTP ports are what get a `*.proxy.runpod.net` URL |
 | Training dies when the terminal disconnects | Wasn't run inside `tmux`/`nohup` — see step 8 |
-| CUDA out of memory | Lower `--batch_size` (raise `--grad_accum` to keep the effective batch size), or lower `--max_seq_len` |
+| CUDA out of memory | Defaults are already sized for a 24-32GB card (`--batch_size 2`) — if you still hit it, lower `--max_seq_len` next (e.g. `768`), then `--batch_size 1` (raising `--grad_accum` to compensate) as a last resort. See `finetune/README.md`'s "Method: QLoRA" note for why Gemma-2's vocab size is the actual driver here |
 | `FileNotFoundError` for `train_consolidated.parquet` | Data transfer (step 5) didn't land at the path `train.py` expects — check `--train_data` or move the file to `gatekeeper/data/` |
