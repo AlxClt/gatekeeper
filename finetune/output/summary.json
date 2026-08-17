@@ -1,0 +1,38 @@
+{
+  "elapsed_seconds": 9486.4,
+  "elapsed_human": "2h38m06s",
+  "steps_completed": 1600,
+  "epochs_completed": 2.493,
+  "n_evals": 9,
+  "latest_metrics": {
+    "eval_loss": 0.0004034504236187786,
+    "eval_precision": 1.0,
+    "eval_recall": 1.0,
+    "eval_f1": 1.0,
+    "eval_fpr": 0.0,
+    "eval_malformed_rate": 0.0
+  },
+  "config": {
+    "base_model": "google/gemma-2-9b-it",
+    "train_data": "/workspace/gatekeeper/data/train_consolidated.parquet",
+    "output_dir": "/workspace/gatekeeper/finetune/output",
+    "val_fraction": 0.05,
+    "max_seq_len": 1024,
+    "epochs": 3.0,
+    "batch_size": 2,
+    "grad_accum": 8,
+    "lr": 0.0002,
+    "warmup_ratio": 0.03,
+    "eval_steps": 200,
+    "eval_accumulation_steps": 5,
+    "early_stopping_patience": 3,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "attn_implementation": "eager",
+    "tensorboard_port": 6006,
+    "seed": 42,
+    "resume_from_checkpoint": null,
+    "skip_merge": false
+  }
+}

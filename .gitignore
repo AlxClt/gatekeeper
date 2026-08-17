@@ -8,6 +8,7 @@ useful.txt
 TO DOCUMENT.txt
 *.pdf
 finetune/output/merged/*
+*.gguf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

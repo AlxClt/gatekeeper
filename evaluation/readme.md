@@ -8,7 +8,7 @@ Results from [`evaluation.ipynb`](evaluation.ipynb) — prompt-injection (LLM01)
 |---|---|
 | Zero-shot, 3B | **llama3.2:3b**, **qwen2.5:3b**, **gemma3:4b** |
 | Zero-shot, 9B | **gemma2:9b**, **llama3.1:8b**, **qwen3:8b** |
-| Fine-tuned | _TBD_ |
+| Fine-tuned | **gemma2:9b** |
 
 We also run a 12B model for reference: **gemma4:12b**. It doesn't bring significant uplift in performance metrics, suggesting that the model capacity is not the limiting factor for improvement.
 
@@ -16,7 +16,9 @@ System prompt used for all zero-shot ~9B models: `app/llm/prompts/default-9b.yam
 
 System prompt used for all zero-shot ~3B models: `app/llm/prompts/default-3b.yaml`
 
-Fine-tuned model prompt/config: _TBD_
+Fine-tuned model prompt: `app/llm/prompts/finetune_prompt.yaml`
+
+**For more details about the fine tuning process, see `finetune/README.md`**
 
 All models have run on an RTX PRO 4500 GPU with 62GB RAM.
 
@@ -62,7 +64,7 @@ Per-dataset and per-source differences (if any are significant) are called out i
 | gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | 0.940 | 0.038 |
 | qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
 | gemma4:12b | Zero-shot 12B | 0.941 | 0.965 | 0.953 | 0.058 |
-| _TBD_ | Fine-tuned | | | | |
+| gemma2:9b_finetuned | Fine-tuned | 0.890 | 0.991 | 0.938 | 0.118 |
 
 ### Recall by threat class
 
@@ -78,7 +80,7 @@ Per-dataset and per-source differences (if any are significant) are called out i
 | gemma2:9b | Zero-shot 9B | 0.894 | 0.927 |
 | qwen3:8b | Zero-shot 9B | 0.744 | 0.875 |
 | gemma4:12b | Zero-shot 12B | 0.908 | 0.979 |
-| _TBD_ | Fine-tuned | | |
+| gemma2:9b_finetuned | Fine-tuned | 0.971 | 0.996 |
 
 ---
 
@@ -95,60 +97,13 @@ Note: comparison is only meaningful within a category — models were run on dif
 | gemma2:9b | Zero-shot 9B | 1.21 |
 | qwen3:8b | Zero-shot 9B | 0.96 |
 | gemma4:12b | Zero-shot 12B | 1.25 |
-| _TBD_ | Fine-tuned | |
-
----
-
-## Manual inspection notes
-
-Observations from the false positive / false negative review (§4 of the notebook), per model.
-
-### Zero-shot 3B
-
-#### llama3.2:3b
-
-- False positives:
-- False negatives:
-
-#### qwen2.5:3b
-
-- False positives:
-- False negatives:
-
-#### gemma3:4b
-
-- False positives:
-- False negatives:
-
-### Zero-shot 9B
-
-#### gemma2:9b
-
-- False positives:
-- False negatives:
-
-#### llama3.1:8b
-
-- False positives:
-- False negatives:
-
-#### qwen3:8b
-
-- False positives:
-- False negatives:
-
-### Fine-tuned
-
-#### _TBD_
-
-- False positives:
-- False negatives:
+| gemma2:9b_finetuned | Fine-tuned | 0.981 |
 
 ---
 
 ## Remarks
 
-_TBD_
+Fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74), to be investigated further
 
 ---
 

@@ -1,0 +1,5 @@
+FROM /workspace/gatekeeper-finetuned-f16.gguf
+
+PARAMETER temperature 0
+PARAMETER num_predict 1
+PARAMETER stop "<end_of_turn>"
