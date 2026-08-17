@@ -92,7 +92,7 @@ scp -P <ssh-port> "root@<pod-ip>:/workspace/gatekeeper/finetune/output/{summary.
 scp -r -P <ssh-port> root@<pod-ip>:/workspace/gatekeeper/finetune/output/merged ./
 ```
 
-## 11. Serve the merged model with Ollama
+## 11. Serving the merged model with Ollama
 
 The author of this repo is serving the model using Ollama. This sections describes the necessary steps.
 
