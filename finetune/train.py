@@ -23,12 +23,14 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import argparse
 import atexit
 import json
+import shutil
 import subprocess
 import time
 from pathlib import Path
 
 import numpy as np
 import torch
+from huggingface_hub import hf_hub_download
 from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import (
     AutoModelForCausalLM,
@@ -197,7 +199,21 @@ def merge_and_save(base_model: str, adapter_dir: Path, merged_dir: Path) -> None
     merged = PeftModel.from_pretrained(base, adapter_dir).merge_and_unload()
     merged.save_pretrained(merged_dir, safe_serialization=True)
     AutoTokenizer.from_pretrained(base_model, token=hf_token).save_pretrained(merged_dir)
+    _copy_sentencepiece_model(base_model, merged_dir, hf_token)
     print(f"Merged model saved to {merged_dir}")
+
+
+def _copy_sentencepiece_model(base_model: str, merged_dir: Path, hf_token: str | None) -> None:
+    """The fast tokenizer's save_pretrained doesn't write out the raw SentencePiece
+    tokenizer.model — but llama.cpp's convert_hf_to_gguf.py needs that exact file for Gemma's
+    vocab (it isn't recoverable from tokenizer.json alone), so fetch it from the Hub directly and
+    drop it alongside the merged model. See finetune/RUNPOD.md's "Serve the merged model with
+    Ollama" step."""
+    try:
+        path = hf_hub_download(base_model, filename="tokenizer.model", token=hf_token)
+        shutil.copy(path, merged_dir / "tokenizer.model")
+    except Exception as exc:
+        print(f"Warning: couldn't fetch tokenizer.model ({exc}) — GGUF conversion may need it copied in manually.")
 
 
 def main() -> None:

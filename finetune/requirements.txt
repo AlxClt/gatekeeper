@@ -1,5 +1,6 @@
 torch>=2.3
 transformers>=5.0,<6
+huggingface_hub>=0.24
 peft>=0.12
 bitsandbytes>=0.43
 accelerate>=0.33
