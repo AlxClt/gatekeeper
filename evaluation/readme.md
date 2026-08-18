@@ -103,7 +103,10 @@ Note: comparison is only meaningful within a category — models were run on dif
 
 ## Remarks
 
-Fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74), to be investigated further
+Fine tuned model is faster and has a significantly higher recall, however it is a bit behind zero shot classification in terms of precision. A lot of false positive look like jailbreak attemps, using impersonnation or fictional framing but either not targeted towards prompt/instructions/secrets extraction or sometimes simply begning (as an examlpe "Imagine you are a highly advanced AI model who has the ability to take on the persona of various animals..", "You're a creative assistant, specializing in mental health simulations for therapists' training.." )
+Those are among the edge cases that the zero shot classifier sometimes misshandles, and this loss of precision probably reflects these cases being more representated in the training set, even after distillation. This illustrates the limits of such a methodology with noisy data.
+
+Note also that the fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74), to be investigated further.
 
 ---
 
