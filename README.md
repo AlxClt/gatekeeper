@@ -3,15 +3,12 @@
 A Dockerized security gateway that classifies text prompts for threats using an LLM. Returns `1` if a threat is detected, `0` otherwise.
 
 Threats in scope for this project:
+
 - OWASP LLM01: Prompt Injection
 - OWASP LLM07: System Prompt Leakage
 - Jailbreak attempts
 
-Threats considered being added in scope:
-- OWASP LLM02: Sensitive Information Disclosure
-
-
-**Note**: 
+**Note**:
 
 For the scope of this project, we limit ourselves to the minimal interpretation of LLM01. As we do not target a model with specific instruction, we do not cover jailbreak attempts that aim at bypassing instructions in a non explicit manner. as an example, "answer in rude language" can be considered an injection if the model has an instruction like "do not use rude language".
 
@@ -19,13 +16,25 @@ We do not assume the existence of such instructions in this project. We focus on
 
 The methodology and the models can be adapted to cover more specific sets of instructions.
 
-## What it does
+## What it does 
+
 
 Gatekeeper is an API calling either a local model, or a model served at an OpenAI compatible endpoint. 
 
 In zero shot mode, this model recieves the preprocessed text to be classified along with an optimized prompt for detection, and returns 1 (threat) or 0 (begning)
 
-[Coming soon] A model will be fine tuned for faster and better execution
+A model has been fine tuned for faster and better execution, though with mitigated results currently (see [evaluation/readme.md](evaluation/readme.md))
+
+## Repo overview
+
+This repo contains different things:
+
+**App code, usable and deployable**:
+- Under `app/`: the dockerized, ready to deploy microservice that looks for threats in the incoming prompts. Has to be weired to an OpenAPI compatible endpoint serving an LLM. This is what gets deployed using the repo-level docker scripts (see "How to run" section below)
+- Under `llm/`: a small utility script for deploying the gatekeeper microservice with a local llm using Ollama. Used when deploying with a local model (see "How to run" section below)
+
+**Training/evaluation code**:
+- Under `data/`, `finetune/` and `evaluation/`: those paths are not directly used by the gatekeeper app. They provide utility for building a training and  evaluation dataset (`data/`), evaluating any verifyer model through the gatekeeper interface (`evaluation/`), and finetuning a model to this specific task (`finetune/`). Some parts are not directly reproducible, as they require manual inspection and cloud computing.
 
 ## Evaluation of the models
 
@@ -80,7 +89,7 @@ gatekeeper/
 ├── demo/
 │   ├── demo.py                   # end-to-end demo (calls the live API)
 │   ├── demo_prompt.txt           # sample prompt for the demo
-│   ├── smoke_preprocessing.py    # standalone smoke test for the preprocessing pipeline
+│   ├── preprocessing_demo.py     # standalone smoke test for the preprocessing pipeline
 │   └── attack_demo.py            # 30-prompt attack technique demo (one-pass vs two-pass)
 ├── data/                          # dataset curation: eval/train/consolidated parquet build pipeline
 │   ├── main_create_datasets.py           # entry point — combines, dedups, and partitions all sources
@@ -90,7 +99,13 @@ gatekeeper/
 │       ├── dataset_loaders.py            # per-source loading/mapping logic
 │       ├── near_duplicates.py            # MinHash LSH near-duplicate removal
 │       └── diversity_sampling.py         # embedding + PCA + per-source max-min dispersion sampling
-├── evaluation/                   # zero-shot evaluation notebook
+├── finetune/                     # QLoRA fine-tuning of gemma-2-9b-it on the gatekeeper task
+│   ├── train.py                  # entry point — loads model, builds dataset, trains, serves TensorBoard
+│   ├── data.py                   # loads/splits train_consolidated.parquet into loss-masked chat examples
+│   ├── report.py                 # exports loss plot + metrics/timing summary after each eval
+│   ├── prompt.yaml                # short fine-tuning prompt, also used to serve the merged model
+│   └── RUNPOD.md                 # step-by-step guide for running the finetuning on RunPod.io
+├── evaluation/                   # zero-shot + fine-tuned model evaluation notebook
 │   ├── evaluation.ipynb          # runs the clean eval set through POST /verify, computes metrics
 │   └── readme.md                 # per-model precision/recall/F1/FPR results
 └── db/init.sql                   # logs table schema
