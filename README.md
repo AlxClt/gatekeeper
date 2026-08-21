@@ -60,7 +60,7 @@ Full per-model evaluation details are reported in [`evaluation/readme.md`](evalu
 | llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | **0.932** | 0.104 |
 | gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | **0.940** | 0.038 |
 | qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
-| *TBD* | Fine-tuned | | | | |
+| gemma2:9b | Fine-tuned | 0.890 | 0.991 | 0.938 | 0.118 |
 
 **Note:** The gatekeeper API can be run independantly from the evaluation part. If you want to run your own tests with the notebooks in `evaluation/`, you should also install the requirments in `evaluation/requirements.txt`.
 
