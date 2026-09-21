@@ -53,18 +53,20 @@ Per-dataset and per-source differences (if any are significant) are called out i
 
 **n=3664**
 
+**The reported numbers are the average of 5 runs, confidence intervals are reported only for the overall F1 values for readability** Note that they are all of the same magnitude for the other metrics, as a low variability has been observed on this task.
+
 ### Overall
 
 | Model | Category | precision | recall | f1 | fpr |
 |---|---|---|---|---|---|
-| llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 | 0.329 |
-| qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 | 0.118 |
-| gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 | 0.442 |
-| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | 0.932 | 0.104 |
-| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | 0.940 | 0.038 |
-| qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
-| gemma4:12b | Zero-shot 12B | 0.941 | 0.965 | 0.953 | 0.058 |
-| gemma2:9b_finetuned | Fine-tuned | 0.890 | 0.991 | 0.938 | 0.118 |
+| llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 +/- 0.004 | 0.329 |
+| qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 +/- 0.005 | 0.118 |
+| gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 +/- 0.003 | 0.442 |
+| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | 0.932 +/- 0.004 | 0.104 |
+| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | 0.940 +/- 0.004 | 0.038 |
+| qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 +/- 0.005 | 0.005 |
+| gemma4:12b | Zero-shot 12B | 0.941 | 0.965 | 0.953 +/- 0.004 | 0.058 |
+| gemma2:9b_finetuned | Fine-tuned | 0.890 | 0.991 | 0.938 +/- 0.005 | 0.118 |
 
 ### Recall by threat class
 
@@ -103,13 +105,8 @@ Note: comparison is only meaningful within a category — models were run on dif
 
 ## Remarks
 
-Fine tuned model is faster and has a significantly higher recall, however it is a bit behind zero shot classification in terms of precision. A lot of false positive look like jailbreak attemps, using impersonnation or fictional framing but either not targeted towards prompt/instructions/secrets extraction or sometimes simply begning (as an examlpe "Imagine you are a highly advanced AI model who has the ability to take on the persona of various animals..", "You're a creative assistant, specializing in mental health simulations for therapists' training.." )
+Fine tuned model is faster and has a significantly higher recall, however it is a bit behind zero shot classification in terms of precision. A first inspection of false positive shows that they look like jailbreak attemps, using impersonnation or fictional framing but either not targeted towards prompt/instructions/secrets extraction or sometimes simply begning (as an examlpe "Imagine you are a highly advanced AI model who has the ability to take on the persona of various animals..", "You're a creative assistant, specializing in mental health simulations for therapists' training.." )
 Those are among the edge cases that the zero shot classifier sometimes misshandles, and this loss of precision probably reflects these cases being more representated in the training set, even after distillation. This illustrates the limits of such a methodology with noisy data.
 
-Note also that the fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74), to be investigated further.
+Note also that the fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74). This is left to further investigation.
 
----
-
-## Summary / takeaways
-
-_TBD_

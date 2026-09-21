@@ -50,17 +50,22 @@ Models have been evaluated on a curated, held-out eval set (3,664 rows, `evaluat
 | [`allenai/wildguardmix`](https://huggingface.co/datasets/allenai/wildguardmix) (`wildguardtest`) | benign | 945 | Plain benign negatives, filtered to `unharmful`-labeled prompts. Gated dataset (requires `HF_TOKEN`). |
 | [`neuralchemy/Prompt-injection-dataset`](https://huggingface.co/datasets/neuralchemy/Prompt-injection-dataset) (`:clean` slice) | LLM01 / LLM07 | 254 (220 LLM01 / 34 LLM07) | Multi-category taxonomy dataset; only categories judged clean/unambiguous enough for eval are kept (e.g. `agent_manipulation`, `instruction_override`, `rag_poisoning`, `system_extraction`). |
 
-Full per-model evaluation details are reported in [`evaluation/readme.md`](evaluation/readme.md). Here is the global models comparison:
+Full per-model evaluation details are reported in [`evaluation/readme.md`](evaluation/readme.md), as well as some thoughts on why the finetuned model does not beat zero shot classification in this case.
+
+**Note**: The numbers reported are the average of 5 evaluation runs - for readability, we only add the 95% confidence interval to the F1 column, but note that they are all comparable and of the same magnitude for the other reported numbers.
+
+Here is the global models comparison:
 
 | Model | Category | precision | recall | f1 | fpr |
 |---|---|---|---|---|---|
-| llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 | 0.329 |
-| qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 | 0.118 |
-| gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 | 0.442 |
-| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | **0.932** | 0.104 |
-| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | **0.940** | 0.038 |
-| qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 | 0.005 |
-| gemma2:9b | Fine-tuned | 0.890 | 0.991 | 0.938 | 0.118 |
+| llama3.2:3b | Zero-shot 3B | 0.746 | 0.991 | 0.851 +/- 0.004 | 0.329 |
+| qwen2.5:3b | Zero-shot 3B | 0.880 | 0.886 | 0.883 +/- 0.005 | 0.118 |
+| gemma3:4b | Zero-shot 3B | 0.687 | 0.996 | 0.813 +/- 0.003 | 0.442 |
+| llama3.1:8b | Zero-shot 9B | 0.901 | 0.965 | **0.932** +/- 0.004 | 0.104 |
+| gemma2:9b | Zero-shot 9B | 0.960 | 0.921 | **0.940** +/- 0.004 | 0.038 |
+| qwen3:8b | Zero-shot 9B | 0.994 | 0.850 | 0.916 +/- 0.005 | 0.005 |
+| gemma2:9b | Fine-tuned | 0.890 | 0.991 | 0.938 +/- 0.004 | 0.118 |
+| gemma2:9b (finetuned) | Fine-tuned | 0.890 | 0.991 | 0.938 +/- 0.005 | 0.118 |
 
 **Note:** The gatekeeper API can be run independantly from the evaluation part. If you want to run your own tests with the notebooks in `evaluation/`, you should also install the requirments in `evaluation/requirements.txt`.
 
