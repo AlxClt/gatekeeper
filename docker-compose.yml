@@ -14,6 +14,7 @@ services:
       - ONLINE_LLM_WARMUP=${ONLINE_LLM_WARMUP:-false}
       - PROMPT_NAME=${PROMPT_NAME:-default}
       - LOG_TO_DB=false
+      - GATEKEEPER_API_TOKEN=${GATEKEEPER_API_TOKEN:-}
     depends_on:
       llm:
         condition: service_healthy

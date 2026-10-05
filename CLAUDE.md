@@ -38,7 +38,7 @@ python demo/demo.py                 # single prompt end-to-end against a live /v
 python demo/attack_demo.py          # 25 prompts across 4 attack categories against both endpoints
 ```
 
-All three demo scripts use only the Python standard library — no dependency install needed to run them. Point them at a non-default host with `GATEKEEPER_URL=http://your-server:8000`.
+All three demo scripts use only the Python standard library — no dependency install needed to run them. Point them at a non-default host with `GATEKEEPER_URL=http://your-server:8000`, and pass the API token with `GATEKEEPER_API_TOKEN=...` (both endpoints require `Authorization: Bearer <token>`; requests get a `503` if the server has no token configured).
 
 ## Architecture
 
@@ -61,5 +61,5 @@ Request flow: `app/api/routes.py` → `app/verification/verifier.py` (`Verifier`
 - `app/` runs with `app/` as the import root inside its container (Dockerfile does `COPY . .` into `/app` then `uvicorn main:app`) — internal imports are absolute from that root (`from api.routes import router`, `from llm.factory import create_llm`), not `app.api.routes`.
 - When touching a prompt YAML in `app/verification/prompts/`, re-run `demo/attack_demo.py` against a live server to sanity-check the four attack categories (harmless / direct attack / verifier evasion / preprocessing) before considering the change done — the taxonomy and calibration examples embedded in the prompt file are the actual spec for what should and shouldn't classify as a threat.
 - `data/` is a separate concern with its own `requirements.txt` (pandas/datasets/huggingface_hub/etc.) — only needed for rebuilding the eval/train datasets, not for running the API itself. `data/eval_dataset_clean.parquet` is excluded from version control; see `data/main_create_datasets.py` (source loaders in `data/helpers/dataset_loaders.py`) for how it's built.
-- `evaluation/` is also a separate concern with its own `requirements.txt` (pandas/scikit-learn/httpx/etc.) — only needed for running `evaluation/evaluation.ipynb` against a live server.
+- `evaluation/` is also a separate concern with its own `requirements.txt` (pandas/scikit-learn/httpx/etc.) — only needed for running `evaluation/evaluation.py` against a live server (writes metrics + classification errors to `evaluation/results/<YYYYMMDD>_<model_name>/`).
 - Model choice tradeoffs (precision/recall/F1/FPR per model) live in the README and `evaluation/readme.md` — check there before assuming a given local/online model is "good enough" for a change.

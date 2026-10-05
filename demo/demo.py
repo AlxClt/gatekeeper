@@ -4,6 +4,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+from _env import get_api_token
+
 if __name__=="__main__":
 
     URL = (os.getenv("GATEKEEPER_URL", "http://localhost:8000") + "/verify").rstrip('/')
@@ -14,7 +16,11 @@ if __name__=="__main__":
     print(f"Sending to {URL} ...\n")
 
     payload = json.dumps({"prompt": prompt}).encode()
-    req = urllib.request.Request(URL, data=payload, headers={"Content-Type": "application/json"})
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {get_api_token()}",
+    }
+    req = urllib.request.Request(URL, data=payload, headers=headers)
 
     t0 = time.perf_counter()
     with urllib.request.urlopen(req) as response:

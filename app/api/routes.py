@@ -1,11 +1,32 @@
 import logging
+import os
+import secrets
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
+
+API_TOKEN = os.getenv("GATEKEEPER_API_TOKEN", "")
+_bearer = HTTPBearer(auto_error=False)
+
+
+def require_token(creds: HTTPAuthorizationCredentials | None = Depends(_bearer)) -> None:
+    # Fail closed: an unconfigured token must never mean "open to everyone"
+    if not API_TOKEN:
+        logger.error("GATEKEEPER_API_TOKEN is not set — rejecting request")
+        raise HTTPException(status_code=503, detail="Authentication not configured")
+    if creds is None or not secrets.compare_digest(creds.credentials.encode(), API_TOKEN.encode()):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+router = APIRouter(dependencies=[Depends(require_token)])
 
 
 class VerifyRequest(BaseModel):

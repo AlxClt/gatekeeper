@@ -4,6 +4,7 @@ useful.txt
 *.docx
 *.csv
 *.png
+*.drawio
 !diversity_sampling_comparison.png 
 *.parquet
 TO DOCUMENT.txt
