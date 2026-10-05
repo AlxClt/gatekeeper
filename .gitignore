@@ -12,6 +12,7 @@ TO DOCUMENT.txt
 *.pdf
 finetune/output/merged/*
 *.gguf
+*data_inspection.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
