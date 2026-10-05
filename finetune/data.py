@@ -36,7 +36,7 @@ def load_split(parquet_path: str, val_fraction: float, seed: int) -> tuple[pd.Da
 
     This val split only monitors training (early stopping, loss/metric curves) — it is drawn from
     the same pool the model trains on. The real held-out benchmark is
-    evaluation/eval_dataset_clean.parquet, scored separately by evaluation/evaluation.ipynb once
+    evaluation/eval_dataset_clean.parquet, scored separately by evaluation/evaluation.py once
     this model is deployed behind the gatekeeper API.
     """
     df = pd.read_parquet(parquet_path)

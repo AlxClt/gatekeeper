@@ -1,7 +1,7 @@
 """Filters train_raw.parquet down to rows the gatekeeper model actually agrees are threats.
 
 Sends every `label=1` row through a live gatekeeper `/verify` endpoint (same one-pass call as
-evaluation/evaluation.ipynb) — `label=0` rows don't need a model opinion, so they're kept as-is
+evaluation/evaluation.py) — `label=0` rows don't need a model opinion, so they're kept as-is
 without an API call. Any `label=1` row the model predicts as `0` is training-label noise the model
 doesn't even recognize as an attack under its own zero-shot judgment, and gets dropped too.
 

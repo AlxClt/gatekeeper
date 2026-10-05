@@ -1,6 +1,21 @@
 # Gatekeeper Evaluation
 
-Results from [`evaluation.ipynb`](evaluation.ipynb) — prompt-injection (LLM01) and system-prompt-leakage (LLM07), run one-pass (`POST /verify`) against the clean eval set built in [`../data/main_create_datasets.py`](../data/main_create_datasets.py) (`eval_dataset_clean.parquet`).
+Results from [`evaluation.py`](evaluation.py) that runs one-pass (`POST /verify`) against the clean eval set built in [`../data/main_create_datasets.py`](../data/main_create_datasets.py).
+
+To reproduce against a live server (`pip install -r evaluation/requirements.txt` first):
+
+```bash
+GATEKEEPER_URL=http://your-server:8000 GATEKEEPER_API_TOKEN=your-token python evaluation/evaluation.py
+```
+
+Each run writes:
+
+- `metrics.csv`: overall metrics and per dataset
+- `recall_by_threat_class.csv`: metrics by threat class (LLM01 and LLM07)
+- `errors.csv`: every false positive and false negative
+- `run_info.json`: execution timing
+
+Results are written to `results/<YYYYMMDD>_<model_name>/`. `model_name` is read from `../.env`
 
 **Models compared:**
 
@@ -47,9 +62,9 @@ Last but not least, LLM01 and LLM07 are not mutually exclusive and some datasets
 
 ## Metrics
 
-Precision, recall, F1, and FPR reported as one **overall** binary-task summary (LLM01/LLM07 = 1 vs. benign = 0) across all three model categories, so zero-shot 3B, zero-shot 9B, and the fine-tuned model can be compared directly. Recall is additionally broken out per threat class (LLM01 vs. LLM07) — the dataset's negatives aren't split per threat class, so recall is the only one of the four metrics that's meaningful at that granularity (see notebook §3).
+Precision, recall, F1, and FPR reported as one **overall** binary-task summary (LLM01/LLM07 = 1 vs. benign = 0) across all three model categories, so zero-shot 3B, zero-shot 9B, and the fine-tuned model can be compared directly. Recall is additionally broken out per threat class (LLM01 vs. LLM07) — the dataset's negatives aren't split per threat class, so recall is the only one of the four metrics that's meaningful at that granularity (see the `evaluation.py` docstring).
 
-Per-dataset and per-source differences (if any are significant) are called out in the [Remarks](#remarks) section below rather than as a table — see the notebook's own per-dataset breakdown for the underlying numbers.
+Per-dataset and per-source differences (if any are significant) are called out in the [Remarks](#remarks) section below rather than as a table — see `metrics.csv` in each run's `results/<YYYYMMDD>_<model_name>/` folder for the underlying numbers.
 
 **n=3664**
 
@@ -88,7 +103,7 @@ Per-dataset and per-source differences (if any are significant) are called out i
 
 ## Time per request
 
-Note: comparison is only meaningful within a category — models were run on different hardware/hosting setups across categories.
+Note: All models have been run on the same hardware (RTX PRO 4500 GPU with 62GB RAM)
 
 | Model | Category | average time per request (seconds) |
 |---|---|---|
@@ -109,4 +124,3 @@ Fine tuned model is faster and has a significantly higher recall, however it is 
 Those are among the edge cases that the zero shot classifier sometimes misshandles, and this loss of precision probably reflects these cases being more representated in the training set, even after distillation. This illustrates the limits of such a methodology with noisy data.
 
 Note also that the fine tunined model performs exceptionnally well (F1 0.99) except on deepset/prompt-injections (F1 0.74). This is left to further investigation.
-

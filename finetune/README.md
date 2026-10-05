@@ -81,7 +81,7 @@ token except that label + `<end_of_turn>`
 - A 5% stratified (by `label`) split is held out as `val` purely to monitor training (early
   stopping, loss/metric curves) — coming from the *same* pool as train. The actual held-out test set is
   `evaluation/eval_dataset_clean.parquet` (3,664 rows, entirely disjoint sources), scored the same
-  way the zero-shot models were via `evaluation/evaluation.ipynb`, once this model is deployed
+  way the zero-shot models were via `evaluation/evaluation.py`, once this model is deployed
   behind the gatekeeper API. The final, real eval numbers are in the
   `evaluation/readme.md` comparison table.
 
