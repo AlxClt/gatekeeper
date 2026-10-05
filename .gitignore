@@ -6,6 +6,7 @@ useful.txt
 *.png
 *.drawio
 !diversity_sampling_comparison.png 
+!gatekeeper_overview.png 
 *.parquet
 TO DOCUMENT.txt
 *.pdf

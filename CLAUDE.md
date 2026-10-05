@@ -12,7 +12,7 @@ Gatekeeper is a Dockerized FastAPI service that classifies text prompts as threa
 cp .env.example .env
 ```
 
-**Local LLM** (Ollama container, no DB logging):
+**Local LLM** (Ollama container):
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local-llm.yml --profile local-llm up
 ```
@@ -22,13 +22,7 @@ docker compose -f docker-compose.yml -f docker-compose.local-llm.yml --profile l
 docker compose up
 ```
 
-**Prod overlay** (adds Postgres logging, combine with either backend above):
-```bash
-docker compose -f docker-compose.yml -f docker-compose.local-llm.yml -f docker-compose.prod.yml --profile local-llm up
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up
-```
-
-Compose files are additive overlays, not standalone alternatives — `docker-compose.local-llm.yml` and `docker-compose.prod.yml` only set env vars / add services on top of the base `docker-compose.yml`.
+Compose files are additive overlays, not standalone alternatives — `docker-compose.local-llm.yml` only sets env vars on top of the base `docker-compose.yml`.
 
 There is no test suite (no pytest/unittest anywhere in the repo). Verification is done via the scripts in `demo/`:
 
@@ -42,7 +36,7 @@ All three demo scripts use only the Python standard library — no dependency in
 
 ## Architecture
 
-Request flow: `app/api/routes.py` → `app/verification/verifier.py` (`Verifier`) → `app/verification/preprocessing.py` + `app/llm/llm_adaptater.py` → `app/db/logger.py`.
+Request flow: `app/api/routes.py` → `app/verification/verifier.py` (`Verifier`) → `app/verification/preprocessing.py` + `app/llm/llm_adaptater.py`.
 
 - **`app/main.py`** — FastAPI app + lifespan. On startup it builds the `Verifier` once via `create_llm()` and stashes it on `app.state.verifier`; routes pull it from there rather than constructing it per-request. If `LLM_BACKEND=local`, startup blocks until Ollama reports the model pulled *and* has run one warmup generation (`_wait_for_local_model`) — this is why local-backend startup is slow. Online backends only warm up if `ONLINE_LLM_WARMUP=true` (for self-hosted OpenAI-compatible servers with Ollama-style cold starts; real hosted APIs skip this).
 
@@ -51,8 +45,6 @@ Request flow: `app/api/routes.py` → `app/verification/verifier.py` (`Verifier`
 - **`app/verification/verifier.py`** — `Verifier.verify()` (single-pass: preprocess then classify) and `Verifier.verify_raw()` (two-pass: classify raw text AND preprocessed text, threat if either fires). `_classify()` loads the YAML prompt template fresh on every call (not cached — "kept for future extensibility" per the comment), substitutes `{{input}}`, and retries up to `LLM_RETRY_CALLS` times on `httpx.HTTPError` or a malformed (non-`0`/`1`) LLM response. On retry exhaustion for a malformed response, it fails closed (defaults to `1`, threat); on retry exhaustion for an HTTP error, it re-raises. The LLM's system prompt is selected via `PROMPT_NAME` env var → `app/verification/prompts/<name>.yaml`; there is no `default.yaml`, only `default-3b.yaml` and `default-9b.yaml` (sized to the target model's parameter count — see the calibration examples/threat taxonomy inside those files before editing).
 
 - **`app/verification/preprocessing.py`** — pure functions, no I/O. Pipeline order matters: truncate → strip invisible/control chars → decode obfuscation layers (URL-encoding, HTML entities, base64, hex, applied in sequence) → NFKC unicode normalization (defeats fullwidth lookalike chars) → strip fake model markup (`<|system|>`-style control tokens and `<system>`-style tag delimiters) → regex pre-screen for PII/credential patterns (logged, not stripped). Returns a `PreprocessingResult(text, pattern_hits)`. `verify_raw`'s raw pass intentionally skips this pipeline so prompts that legitimately contain `<system>`-style tags can still be checked as-is.
-
-- **`app/db/logger.py`** — `DBLogger` is a no-op wrapper when `LOG_TO_DB=false` (the default); only connects to Postgres and inserts into the `logs` table (schema in `db/init.sql`) when explicitly enabled via the prod compose overlay.
 
 - Two endpoints in `app/api/routes.py`: `POST /verify` (single-pass, returns the preprocessed prompt for safe forwarding downstream) and `POST /verify-raw` (two-pass, no preprocessed text returned — use when the untouched original must be forwarded). Both map `httpx.HTTPError` from the verifier to a `502`.
 

@@ -9,7 +9,6 @@ import yaml
 from fastapi import FastAPI
 
 from api.routes import router
-from db.logger import DBLogger
 from llm.factory import create_llm
 from llm.llm_adaptater import OnlineAdapter
 from verification.verifier import Verifier
@@ -94,13 +93,9 @@ async def lifespan(app: FastAPI):
         await _wait_for_local_model()
     elif os.getenv("ONLINE_LLM_WARMUP", "false").lower() == "true":
         await _wait_for_online_model()
-    llm = create_llm()
-    db_logger = DBLogger(enabled=os.getenv("LOG_TO_DB", "false").lower() == "true")
-    await db_logger.connect()
-    app.state.verifier = Verifier(llm=llm, db_logger=db_logger)
+    app.state.verifier = Verifier(llm=create_llm())
     logger.info("Gatekeeper ready — POST /verify to classify prompts")
     yield
-    await db_logger.close()
 
 
 app = FastAPI(title="Gatekeeper", lifespan=lifespan)

@@ -6,7 +6,6 @@ from pathlib import Path
 import httpx
 import yaml
 
-from db.logger import DBLogger
 from llm.llm_adaptater import LLMInterface
 from verification.preprocessing import preprocess
 
@@ -23,9 +22,8 @@ class MalformedLLMOutputException(Exception):
         super().__init__(message)
 
 class Verifier:
-    def __init__(self, llm: LLMInterface, db_logger: DBLogger):
+    def __init__(self, llm: LLMInterface):
         self.llm = llm
-        self.db_logger = db_logger
 
     async def _preprocess(self, text: str) -> str:
         """Preprocesses the candidate prompt, returns cleaned prompt (not threatless, but )"""
@@ -66,7 +64,6 @@ class Verifier:
         """Single-pass: preprocess then classify. Returns (result, preprocessed_text)."""
         preprocessed = await self._preprocess(text)
         result = await self._classify(preprocessed)
-        await self.db_logger.log(preprocessed, result)
         return result, preprocessed
 
     async def verify_raw(self, text: str) -> int:
@@ -74,9 +71,7 @@ class Verifier:
         result_raw = await self._classify(text)
         preprocessed = await self._preprocess(text)
         result_clean = await self._classify(preprocessed)
-        result = max(result_raw, result_clean)
-        await self.db_logger.log(text, result)
-        return result
+        return max(result_raw, result_clean)
     
     @staticmethod
     def _parse_result(response: str) -> int:

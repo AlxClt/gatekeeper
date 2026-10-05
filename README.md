@@ -69,7 +69,7 @@ The evaluation dataset has been built with the sources with low label-noise rati
 cp .env.example .env
 ```
 
-**Local LLM** — Ollama + app, no database logging:
+**Local LLM** — Ollama + app:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local-llm.yml --profile local-llm up
@@ -83,16 +83,6 @@ Note that the model's weights are loaded into memory at app startup time, which 
 # set in .env:
 # ONLINE_LLM_API_KEY=sk-...
 docker compose up
-```
-
-**Prod** — adds Postgres with persistent logging (combine with either backend above):
-
-```bash
-# local backend + prod
-docker compose -f docker-compose.yml -f docker-compose.local-llm.yml -f docker-compose.prod.yml --profile local-llm up
-
-# online backend + prod
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 ```
 
 ## API
@@ -162,8 +152,6 @@ Authorization: Bearer <token>
 | `ONLINE_LLM_MODEL` | `gpt-4o-mini` | Model name for the online provider |
 | `ONLINE_LLM_TIMEOUT` | `30` | Request timeout (seconds) for the online backend |
 | `ONLINE_LLM_WARMUP` | `false` | Fire a warmup request at startup instead of on the first user request. Only relevant for self-hosted OpenAI-compatible servers with Ollama-style cold starts — real hosted APIs are already warm and don't need it |
-| `LOG_TO_DB` | `false` | Enable Postgres logging (`true` in prod overlay) |
-| `POSTGRES_PASSWORD` | `gatekeeper` | Postgres password (prod only) |
 | `HF_TOKEN` | — | Hugging Face token, only needed to rebuild the eval dataset (gated `allenai/wildguardmix` dataset) |
 
 
@@ -281,7 +269,6 @@ GATEKEEPER_URL=http://your-server:8000 GATEKEEPER_API_TOKEN=your-token python de
 gatekeeper/
 ├── docker-compose.yml            # base: app service, defaults to the online backend
 ├── docker-compose.local-llm.yml  # local-llm overlay: switches app to the local backend
-├── docker-compose.prod.yml       # prod overlay: adds Postgres, enables logging
 ├── .env.example
 ├── app/                          # FastAPI container
 │   ├── main.py
@@ -290,10 +277,9 @@ gatekeeper/
 │   │   ├── verifier.py           # single-pass (verify) and two-pass (verify_raw) classification logic
 │   │   ├── preprocessing.py      # input sanitisation pipeline (7 steps, see below)
 │   │   └── prompts/              # LLM system prompts: default-3b.yaml, default-9b.yaml
-│   ├── llm/
-│   │   ├── factory.py            # selects adapter from LLM_BACKEND env var
-│   │   └── llm_adaptater.py      # LLMInterface + LocalAdapter (Ollama) + OnlineAdapter (OpenAI-compatible)
-│   └── db/logger.py              # Postgres logging (no-op when LOG_TO_DB=false)
+│   └── llm/
+│       ├── factory.py            # selects adapter from LLM_BACKEND env var
+│       └── llm_adaptater.py      # LLMInterface + LocalAdapter (Ollama) + OnlineAdapter (OpenAI-compatible)
 ├── llm/                          # Ollama container
 │   ├── Dockerfile
 │   └── entrypoint.sh             # starts server, pulls model
@@ -318,7 +304,6 @@ gatekeeper/
 │   └── RUNPOD.md                 # step-by-step guide for running the finetuning on RunPod.io
 ├── evaluation/                   # zero-shot + fine-tuned model evaluation
 │   ├── evaluation.py             # runs the clean eval set through POST /verify, computes metrics
-│   ├── results/                  # per-run metrics + errors, one <YYYYMMDD>_<model_name>/ folder per run
-│   └── README.md                 # per-model precision/recall/F1/FPR results
-└── db/init.sql                   # logs table schema
+    ├── results/                  # per-run metrics + errors, one <YYYYMMDD>_<model_name>/ folder per run
+    └── README.md                 # per-model precision/recall/F1/FPR results
 ```
