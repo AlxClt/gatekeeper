@@ -6,7 +6,6 @@ Threats in scope for this project:
 
 - OWASP LLM01: Prompt Injection
 - OWASP LLM07: System Prompt Leakage
-- Jailbreak attempts
 
 **Note**:
 
